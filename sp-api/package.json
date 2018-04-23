@@ -1,0 +1,31 @@
+{
+  "name": "sp-api",
+  "version": "0.0.1",
+  "description": "Awesome project developed with TypeORM.",
+  "devDependencies": {
+    "@types/node": "^8.0.29",
+    "nodemon": "^1.17.2",
+    "ts-node": "3.3.0",
+    "typescript": "2.5.2"
+  },
+  "dependencies": {
+    "@google/maps": "^0.4.5",
+    "axios": "^0.18.0",
+    "bcrypt": "^1.0.3",
+    "body-parser": "^1.18.1",
+    "email-regex": "^2.0.0",
+    "express": "^4.15.4",
+    "express-mysql-session": "^1.2.3",
+    "express-session": "^1.15.6",
+    "fastpriorityqueue": "^0.3.1",
+    "glob": "^7.1.2",
+    "morgan": "^1.9.0",
+    "mysql": "^2.14.1",
+    "reflect-metadata": "^0.1.10",
+    "typeorm": "^0.1.20"
+  },
+  "scripts": {
+    "start": "nodemon --exec ts-node src/index.ts",
+    "play": "ts-node src/playground.ts"
+  }
+}
