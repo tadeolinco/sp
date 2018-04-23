@@ -58,25 +58,36 @@ export const placesAutocomplete = async input => {
   const response = await googleMaps
     .placesAutoComplete({ input, components: { country: 'ph' } })
     .asPromise()
-  return response.json.predictions.map(({ description, place_id }) => ({
-    name: description,
-    place_id,
-  }))
+
+  return Promise.all(
+    response.json.predictions.map((x: any) => getPlaceById(x.place_id))
+  )
 }
 
 export const getPlace = async latlng => {
   const response = await googleMaps.reverseGeocode({ latlng }).asPromise()
-  const {
-    formatted_address,
-    place_id,
-  } = response.json.results[0].formatted_address
+  const { formatted_address, place_id, geometry } = response.json.results[0]
   const place = {
     name: formatted_address,
     place_id,
+    location: geometry.location,
   }
-  const options = await placesAutocomplete(place)
-  if (!options.find(option => option.name == place)) {
-    options.push(place)
+  const map = { [place.name]: place.place_id }
+  let options: any = await placesAutocomplete(place.name)
+  for (const option of options) {
+    if (map[option.name]) continue
+    map[option.name] = map[option.place_id]
   }
+  options = Object.keys(map).map(name => ({ name, place_id: map[name] }))
   return { place, options }
+}
+
+export const getPlaceById = async placeid => {
+  const response = await googleMaps.place({ placeid }).asPromise()
+  const { formatted_address, geometry, place_id } = response.json.result
+  return {
+    name: formatted_address,
+    location: geometry.location,
+    place_id,
+  }
 }
