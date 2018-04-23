@@ -14,8 +14,8 @@ const SearchPanel = ({
         placeholder="Origin"
         fluid
         selection
-        search
-        value={origin.name}
+        search={options => options}
+        value={origin.place_id}
         options={origin.options}
         style={{ borderRadius: 0, border: 0 }}
         onSearchChange={(event, data) =>
@@ -24,6 +24,7 @@ const SearchPanel = ({
         onChange={(event, data) =>
           handleSearchPanelChange('origin', data.value)
         }
+        noResultsMessage={origin.loadingOptions ? 'Loading...' : 'No results'}
         loading={origin.loadingOptions}
       />
       <Dropdown
@@ -31,8 +32,8 @@ const SearchPanel = ({
         placeholder="Destination"
         fluid
         selection
-        search
-        value={destination.name}
+        search={options => options}
+        value={destination.place_id}
         options={destination.options}
         style={{ borderRadius: 0, border: 0 }}
         onSearchChange={(event, data) =>
@@ -40,6 +41,9 @@ const SearchPanel = ({
         }
         onChange={(event, data) =>
           handleSearchPanelChange('destination', data.value)
+        }
+        noResultsMessage={
+          destination.loadingOptions ? 'Loading...' : 'No results'
         }
         loading={destination.loadingOptions}
       />

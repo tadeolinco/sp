@@ -18,11 +18,11 @@ import { withPlatform } from '../../providers/PlatformProvider'
 
 class MapPanel extends Component {
   state = {
+    zoom: 16,
     visibleSetPanel: false,
     setPanelPosition: { lat: 0, lng: 0 },
     origin: {
       place_id: null,
-      name: '',
       lat: 0,
       lng: 0,
       options: [],
@@ -31,7 +31,6 @@ class MapPanel extends Component {
     },
     destination: {
       place_id: null,
-      name: '',
       lat: 0,
       lng: 0,
       options: [],
@@ -56,6 +55,34 @@ class MapPanel extends Component {
     this.setState({ visibleSetPanel: false })
   }
 
+  fitMarkers = () => {
+    const { LatLng, LatLngBounds } = window.google.maps
+
+    const originLocation = new LatLng(
+      this.state.origin.lat,
+      this.state.origin.lng
+    )
+    const destinationLocation = new LatLng(
+      this.state.destination.lat,
+      this.state.destination.lng
+    )
+    if (this.state.origin.place_id && this.state.destination.place_id) {
+      const bounds = new LatLngBounds()
+
+      if (this.state.origin.place_id) {
+        bounds.extend(originLocation)
+      }
+      if (this.state.destination.place_id) {
+        bounds.extend(destinationLocation)
+      }
+      this.mapRef.fitBounds(bounds)
+    } else if (this.state.origin.place_id) {
+      this.mapRef.panTo(originLocation)
+    } else if (this.state.destination.place_id) {
+      this.mapRef.panTo(destinationLocation)
+    }
+  }
+
   setPlace = async place => {
     try {
       this.setState({
@@ -73,22 +100,26 @@ class MapPanel extends Component {
           })
       )
 
-      this.setState({
-        [place]: {
-          ...this.state[place],
-          place_id: data.place.place_id,
-          lat: this.state.setPanelPosition.lat,
-          lng: this.state.setPanelPosition.lng,
-          name: data.place.name,
-          options: data.options.map((place, index) => ({
-            text: place,
-            value: place,
-            key: index,
-          })),
+      this.setState(
+        {
+          [place]: {
+            ...this.state[place],
+            place_id: data.place.place_id,
+            lat: this.state.setPanelPosition.lat,
+            lng: this.state.setPanelPosition.lng,
+            options: data.options.map((place, index) => ({
+              text: place.name,
+              value: place.place_id,
+              key: index,
+            })),
+          },
+          visibleSetPanel: false,
         },
-        visibleSetPanel: false,
-      })
-      this.props.toggleSearchPanel(true)
+        () => {
+          this.fitMarkers()
+          this.props.toggleSearchPanel(true)
+        }
+      )
     } catch ({ response }) {
       this.props.notifications.addMessage(response.data.message, 'error')
     } finally {
@@ -110,25 +141,65 @@ class MapPanel extends Component {
         },
       })
       debounce('GET_PLACES', 1000, async () => {
-        const { data } = await Axios.get(
-          '/api/places?' + qs.stringify({ input: value })
-        )
-        this.setState({
-          [place]: {
-            ...this.state[place],
-            loadingOptions: false,
-            options: data.places.map((place, index) => ({
-              text: place.name,
-              value: place.place_id,
-              key: index,
-            })),
-          },
-        })
+        try {
+          const { data } = await Axios.get(
+            '/api/places?' + qs.stringify({ input: value })
+          )
+          this.setState({
+            [place]: {
+              ...this.state[place],
+              options: data.places.map((place, index) => ({
+                text: place.name,
+                value: place.place_id,
+                key: index,
+              })),
+            },
+          })
+        } catch ({ response }) {
+          this.props.notifications.addMessage(response.data.message, 'error')
+        } finally {
+          this.setState({
+            [place]: {
+              ...this.state[place],
+              loadingOptions: false,
+            },
+          })
+        }
       })
     }
   }
 
-  handleSearchPanelChange = async (place, value) => {}
+  handleSearchPanelChange = async (place, value) => {
+    this.setState({
+      [place]: {
+        ...this.state[place],
+        loadingOptions: true,
+      },
+    })
+    try {
+      const { data } = await Axios.get(`/api/place/${value}`)
+      this.setState(
+        {
+          [place]: {
+            ...this.state[place],
+            place_id: data.place_id,
+            lat: data.location.lat,
+            lng: data.location.lng,
+          },
+        },
+        this.fitMarkers
+      )
+    } catch ({ response }) {
+      this.props.notifications.addMessage(response.data.message, 'error')
+    } finally {
+      this.setState({
+        [place]: {
+          ...this.state[place],
+          loadingOptions: false,
+        },
+      })
+    }
+  }
 
   render() {
     const options = { styles: mapStyles, disableDefaultUI: true, minZoom: 6 }
@@ -147,7 +218,7 @@ class MapPanel extends Component {
           clickableIcons={false}
           defaultCenter={{ lat: 14.1686279, lng: 121.2424038 }}
           defaultOptions={options}
-          defaultZoom={16}
+          defaultZoom={14}
           onClick={this.handleClick}
           onRightClick={this.handleRightClick}
         >
