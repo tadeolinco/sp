@@ -13,6 +13,7 @@ class FormWrapper extends Component {
       values: {},
       initialValues: {},
       reset: {},
+      submitting: false,
     }
 
     for (const field in fields) {

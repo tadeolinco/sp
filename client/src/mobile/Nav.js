@@ -1,11 +1,44 @@
 import { Dropdown, Icon, Menu } from 'semantic-ui-react'
 import React, { Component } from 'react'
 
+import Axios from 'axios'
 import LoginModal from '../components/LoginModal'
+import SignupModal from '../components/SignupModal'
+import { withNotifications } from '../providers/NotificationsProvider'
+import { withSession } from '../providers/SessionProvider'
 
 class Nav extends Component {
+  logout = async () => {
+    const { session } = this.props
+    try {
+      await Axios.post('/api/logout')
+
+      session.changeUser(null)
+
+      this.props.notifications.addMessage(`Bye!`, 'success')
+    } catch ({ response }) {
+      this.props.notifications.addMessage(response.data.message, 'error')
+    }
+  }
+
   render() {
+    const { session } = this.props
+
     const title = 'Commute Community'
+
+    const withSessionMenu = (
+      <Dropdown.Menu>
+        <Dropdown.Item>Add Route</Dropdown.Item>
+        <Dropdown.Item onClick={this.logout}>Logout</Dropdown.Item>
+      </Dropdown.Menu>
+    )
+
+    const withoutSessionMenu = (
+      <Dropdown.Menu>
+        <LoginModal trigger={<Dropdown.Item>Login</Dropdown.Item>} />
+        <SignupModal trigger={<Dropdown.Item>Sign Up</Dropdown.Item>} />
+      </Dropdown.Menu>
+    )
 
     return (
       <Menu
@@ -27,9 +60,7 @@ class Nav extends Component {
           icon={<Icon name="vertical ellipsis" style={{ margin: 0 }} />}
           style={{ paddingRight: 10, paddingLeft: 10 }}
         >
-          <Dropdown.Menu>
-            <LoginModal trigger={<Dropdown.Item>Login</Dropdown.Item>} />
-          </Dropdown.Menu>
+          {session.user ? withSessionMenu : withoutSessionMenu}
         </Dropdown>
         <Menu.Item header style={{ padding: '15px 10px' }}>
           {title}
@@ -46,4 +77,4 @@ class Nav extends Component {
   }
 }
 
-export default Nav
+export default withSession(withNotifications(Nav))

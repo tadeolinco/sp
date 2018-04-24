@@ -2,36 +2,33 @@ import { Button, Form, FormInput, Message, Modal } from 'semantic-ui-react'
 import React, { Component } from 'react'
 
 import Axios from 'axios'
+import qs from 'qs'
 import withForm from '../util/withForm'
 import { withNotifications } from '../providers/NotificationsProvider'
-import { withSession } from '../providers/SessionProvider'
 
-class LoginModal extends Component {
+class SignupModal extends Component {
   state = { loading: false }
 
-  login = async e => {
+  signup = async e => {
     e.preventDefault()
     this.setState({ loading: true })
-    const { form, session, notifications } = this.props
+    const { form } = this.props
     try {
-      const {
-        data: { user },
-      } = await Axios.post('/api/login', {
+      await Axios.post('/api/users', {
         username: form.values.username,
         password: form.values.password,
       })
 
       this.modalRef.handleClose()
-      notifications.addMessage(`Hi ${user.username}!`, 'success')
-      session.changeUser(user)
+      this.props.notifications.addMessage('Successfully signed up!', 'success')
     } catch ({ response }) {
-      notifications.addMessage(response.data.message, 'error')
+      this.props.notifications.addMessage(response.data.message, 'error')
+    } finally {
       this.setState({ loading: false })
     }
   }
 
   onClose = () => {
-    this.setState({ loading: false })
     this.props.form.resetForm()
   }
 
@@ -47,10 +44,10 @@ class LoginModal extends Component {
         style={style}
         ref={modalRef => (this.modalRef = modalRef)}
       >
-        <Modal.Header>Login</Modal.Header>
+        <Modal.Header>Sign Up</Modal.Header>
         <Modal.Content>
           {!!form.errors.length && <Message error list={form.errors} />}
-          <Form onSubmit={this.login} loading={this.state.loading}>
+          <Form onSubmit={this.signup} loading={this.state.loading}>
             <FormInput
               value={form.values.username}
               onChange={form.set.username}
@@ -65,7 +62,7 @@ class LoginModal extends Component {
             />
 
             <Button type="submit" color="black" fluid disabled={!form.valid}>
-              Login
+              Sign Up
             </Button>
           </Form>
         </Modal.Content>
@@ -75,23 +72,35 @@ class LoginModal extends Component {
 }
 
 export default withNotifications(
-  withSession(
-    withForm(LoginModal, {
-      username: {
-        validator: value => {
-          if (!value) {
-            return 'Username is required.'
-          }
-        },
-      },
+  withForm(SignupModal, {
+    username: {
+      validator: async (value, form) => {
+        if (!value) {
+          return 'Username is required.'
+        }
 
-      password: {
-        validator: value => {
-          if (!value) {
-            return 'Password is required.'
-          }
-        },
+        if (value.length < 4) {
+          return 'Username must at least 4 characters.'
+        }
+
+        const {
+          data: { users },
+        } = await Axios.get('/api/users?' + qs.stringify({ username: value }))
+        if (users.length) {
+          return 'Username already taken.'
+        }
       },
-    })
-  )
+    },
+
+    password: {
+      validator: value => {
+        if (!value) {
+          return 'Password is required.'
+        }
+        if (value.length < 4) {
+          return 'Password must at least 4 characters.'
+        }
+      },
+    },
+  })
 )

@@ -42,15 +42,13 @@ class MapPanel extends Component {
   }
 
   handleClick = e => {
-    if (this.props.platform.isMobile) {
-      this.setState({
-        visibleSetPanel: true,
-        setPanelPosition: {
-          lat: e.latLng.lat(),
-          lng: e.latLng.lng(),
-        },
-      })
-    }
+    this.setState({
+      visibleSetPanel: true,
+      setPanelPosition: {
+        lat: e.latLng.lat(),
+        lng: e.latLng.lng(),
+      },
+    })
   }
 
   handleCloseSetPanel = () => {
@@ -222,7 +220,6 @@ class MapPanel extends Component {
           defaultOptions={options}
           defaultZoom={14}
           onClick={this.handleClick}
-          onRightClick={this.handleRightClick}
         >
           {this.state.visibleSetPanel && (
             <SetPanel

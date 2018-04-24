@@ -1,8 +1,8 @@
-import { getRepository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import { getRepository } from 'typeorm'
+import * as bcrypt from 'bcrypt'
 
-import User from '../user/entity';
-import { isLoggedIn } from './middlware';
+import User from '../user/entity'
+import { isLoggedIn } from './middlware'
 
 const controller = {
   login: {
@@ -11,25 +11,25 @@ const controller = {
     middlewares: [],
     handler: async (req, res) => {
       try {
-        const { email, password } = req.body;
-        const userRepository = getRepository(User);
+        const { username, password } = req.body
+        const userRepository = getRepository(User)
 
-        const user = await userRepository.findOne({ email });
+        const user = await userRepository.findOne({ username })
         if (!user) {
-          res
+          return res
             .status(404)
-            .json({ message: 'User with that email does not exist.' });
+            .json({ message: 'User with that username does not exist.' })
         }
 
-        if (!await bcrypt.compare(password, user.password)) {
-          res.status(400).json({ message: 'Wrong credentials.' });
+        if (!(await bcrypt.compare(password, user.password))) {
+          return res.status(400).json({ message: 'Wrong credentials.' })
         }
-        delete user.password;
-        req.session.user = user;
-        res.status(200).json({ data: user });
+        delete user.password
+        req.session.user = user
+        res.status(200).json({ user })
       } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: 'Internal server error.' });
+        console.log(err)
+        res.status(500).json({ message: 'Internal server error.' })
       }
     },
   },
@@ -40,11 +40,11 @@ const controller = {
     middlewares: [isLoggedIn],
     handler: async (req, res) => {
       try {
-        await req.session.destroy();
-        res.status(200).json({});
+        await req.session.destroy()
+        res.status(200).json({})
       } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: 'Internal server error.' });
+        console.log(err)
+        res.status(500).json({ message: 'Internal server error.' })
       }
     },
   },
@@ -55,13 +55,13 @@ const controller = {
     middlewares: [],
     handler: async (req, res) => {
       try {
-        res.status(200).json({ data: req.session.user || null });
+        res.status(200).json({ user: req.session.user || null })
       } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: 'Internal server error.' });
+        console.log(err)
+        res.status(500).json({ message: 'Internal server error.' })
       }
     },
   },
-};
+}
 
-export default Object.keys(controller).map(key => controller[key]);
+export default Object.keys(controller).map(key => controller[key])

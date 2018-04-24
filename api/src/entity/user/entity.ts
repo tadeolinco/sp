@@ -13,10 +13,8 @@ import Route from '../route/entity'
 class User {
   @PrimaryGeneratedColumn() id: number
 
-  @Column() nickname: string
-
   @Column({ unique: true })
-  email: string
+  username: string
 
   @Column() password: string
 

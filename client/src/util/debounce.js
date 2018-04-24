@@ -1,11 +1,14 @@
 const timers = {}
 
-const debounce = (id, delay, fn, args) => {
+const debounce = (id, delay, fn, callback) => {
   if (timers[id] === undefined) timers[id] = null
 
   clearTimeout(timers[id])
   timers[id] = setTimeout(async () => {
-    await fn.apply(null, args)
+    const data = await fn.apply(null)
+    if (callback) {
+      callback(data)
+    }
   }, delay)
 }
 

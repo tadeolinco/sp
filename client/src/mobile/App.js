@@ -5,7 +5,9 @@ import Nav from './Nav'
 import { withSession } from '../providers/SessionProvider'
 
 class App extends Component {
-  state = { visible: false }
+  state = { visible: false, mapMode: 'view' }
+
+  changeMapMode = mapMode => this.setState({ mapMode })
 
   toggleVisible = visible => {
     this.setState({
@@ -17,9 +19,13 @@ class App extends Component {
     return (
       <Fragment>
         <div ref={divElement => (this.divElement = divElement)}>
-          <Nav toggleVisible={this.toggleVisible} />
+          <Nav
+            toggleVisible={this.toggleVisible}
+            changeMapMode={this.changeMapMode}
+          />
         </div>
         <MapPanel
+          mapMode={this.state.mapMode}
           visibleSearchPanel={this.state.visible}
           toggleSearchPanel={this.toggleVisible}
           containerElement={
