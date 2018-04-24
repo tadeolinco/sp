@@ -17,7 +17,7 @@ const SearchPanel = ({
         search={options => options}
         value={origin.place_id}
         options={origin.options}
-        style={{ borderRadius: 0, border: 0 }}
+        style={{ borderRadius: 0, border: 0, borderLeft: '5px solid #2185d0' }}
         onSearchChange={(event, data) =>
           handleSearch('origin', data.searchQuery)
         }
@@ -35,7 +35,7 @@ const SearchPanel = ({
         search={options => options}
         value={destination.place_id}
         options={destination.options}
-        style={{ borderRadius: 0, border: 0 }}
+        style={{ borderRadius: 0, border: 0, borderLeft: '5px solid #db2828' }}
         onSearchChange={(event, data) =>
           handleSearch('destination', data.searchQuery)
         }

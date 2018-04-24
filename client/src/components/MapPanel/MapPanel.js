@@ -11,7 +11,9 @@ import Axios from 'axios'
 import SearchPanel from './SearchPanel'
 import SetPanel from './SetPanel'
 import debounce from '../../util/debounce'
+import destinationLogo from './assets/destination.svg'
 import mapStyles from './style.json'
+import originLogo from './assets/origin.svg'
 import qs from 'qs'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
@@ -232,12 +234,14 @@ class MapPanel extends Component {
             />
           )}
           <Marker
+            icon={originLogo}
             position={{
               lat: this.state.origin.lat,
               lng: this.state.origin.lng,
             }}
           />
           <Marker
+            icon={destinationLogo}
             position={{
               lat: this.state.destination.lat,
               lng: this.state.destination.lng,
