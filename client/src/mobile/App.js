@@ -3,9 +3,13 @@ import React, { Component, Fragment } from 'react'
 import MapPanel from '../components/MapPanel/MapPanel'
 import Nav from './Nav'
 import { withSession } from '../providers/SessionProvider'
+import { MAP_MODE } from '../constants'
 
 class App extends Component {
-  state = { visible: false, mapMode: 'view' }
+  state = {
+    visible: false,
+    mapMode: MAP_MODE.VIEW,
+  }
 
   changeMapMode = mapMode => this.setState({ mapMode })
 

@@ -17,10 +17,11 @@ import originLogo from './assets/origin.svg'
 import qs from 'qs'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
+import { DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
 
 class MapPanel extends Component {
   state = {
-    zoom: 16,
+    zoom: 14,
     visibleSetPanel: false,
     setPanelPosition: { lat: 0, lng: 0 },
     origin: {
@@ -140,7 +141,7 @@ class MapPanel extends Component {
           loadingOptions: true,
         },
       })
-      debounce('GET_PLACES', 1000, async () => {
+      debounce(DEBOUNCE_ACTIONS.GET_PLACES, 1000, async () => {
         try {
           const { data } = await Axios.get(
             '/api/places?' + qs.stringify({ input: value })
@@ -202,7 +203,13 @@ class MapPanel extends Component {
   }
 
   render() {
-    const options = { styles: mapStyles, disableDefaultUI: true, minZoom: 6 }
+    const { mapMode } = this.props
+    const options = {
+      styles: mapStyles,
+      disableDefaultUI: true,
+      minZoom: mapMode === MAP_MODE.VIEW ? 6 : 16,
+    }
+    console.log(mapMode)
     return (
       <Fragment>
         {this.props.visibleSearchPanel && (
@@ -217,9 +224,16 @@ class MapPanel extends Component {
           ref={mapRef => (this.mapRef = mapRef)}
           clickableIcons={false}
           defaultCenter={{ lat: 14.1686279, lng: 121.2424038 }}
-          defaultOptions={options}
-          defaultZoom={14}
+          options={options}
+          zoom={this.state.zoom}
           onClick={this.handleClick}
+          onZoomChanged={() => {
+            if (this.mapRef.getZoom() < options.minZoom) {
+              this.setState({ zoom: options.minZoom })
+            } else {
+              this.setState({ zoom: this.mapRef.getZoom() })
+            }
+          }}
         >
           {this.state.visibleSetPanel && (
             <SetPanel

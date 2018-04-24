@@ -6,6 +6,7 @@ import LoginModal from '../components/LoginModal'
 import SignupModal from '../components/SignupModal'
 import { withNotifications } from '../providers/NotificationsProvider'
 import { withSession } from '../providers/SessionProvider'
+import { MAP_MODE } from '../constants'
 
 class Nav extends Component {
   logout = async () => {
@@ -28,7 +29,13 @@ class Nav extends Component {
 
     const withSessionMenu = (
       <Dropdown.Menu>
-        <Dropdown.Item>Add Route</Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => {
+            this.props.changeMapMode(MAP_MODE.ADD_ROUTE)
+          }}
+        >
+          Add Route
+        </Dropdown.Item>
         <Dropdown.Item onClick={this.logout}>Logout</Dropdown.Item>
       </Dropdown.Menu>
     )
