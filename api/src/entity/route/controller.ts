@@ -8,13 +8,28 @@ import { isLoggedIn } from '../auth/middlware'
 import { snapToRoads } from '../../googleMaps'
 
 const controller = {
+  snapToRoad: {
+    method: 'get',
+    path: '/snapToRoad',
+    middlewares: [],
+    handler: async (req, res) => {
+      try {
+        const path = await snapToRoads(req.query.path)
+        res.status(200).json({ path })
+      } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: 'Internal server error.' })
+      }
+    },
+  },
+
   get: {
     method: 'get',
     path: '/routes',
     middlewares: [],
     handler: async (req, res) => {
       try {
-        const path = await getPath(req.query.start, req.query.goal)
+        const path = await getPath(req.query.origin, req.query.destination)
 
         res.status(200).json({ data: path })
       } catch (err) {

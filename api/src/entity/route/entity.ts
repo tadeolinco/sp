@@ -6,25 +6,27 @@ import {
   ManyToOne,
   JoinTable,
   OneToMany,
-} from 'typeorm';
-import Node from '../node/entity';
-import User from '../user/entity';
+} from 'typeorm'
+import Node from '../node/entity'
+import User from '../user/entity'
 
 @Entity()
 class Route {
-  @PrimaryGeneratedColumn() id: number;
+  @PrimaryGeneratedColumn() id: number
 
-  @Column() mode: string;
+  @Column() fare: number
+
+  @Column() mode: string
 
   @ManyToOne(type => User, user => user.routes)
-  owner: User;
+  owner: User
 
   @ManyToMany(type => User, user => user.reports)
-  reporters: User[];
+  reporters: User[]
 
   @OneToMany(type => Node, node => node.route)
   @JoinTable()
-  nodes: Node[];
+  nodes: Node[]
 }
 
-export default Route;
+export default Route

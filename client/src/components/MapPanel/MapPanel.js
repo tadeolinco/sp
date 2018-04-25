@@ -1,6 +1,7 @@
 import {
   GoogleMap,
   Marker,
+  Polyline,
   withGoogleMap,
   withScriptjs,
 } from 'react-google-maps'
@@ -17,11 +18,18 @@ import originLogo from './assets/origin.svg'
 import qs from 'qs'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
-import { DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
+import { DEBOUNCE_ACTIONS, MAP_MODE, ADD_ROUTE } from '../../constants'
+import { Button, Icon } from 'semantic-ui-react'
 
 class MapPanel extends Component {
-  state = {
+  initialState = {
     visibleSetPanel: false,
+    addingRoute: null,
+    newPath: [],
+    tentativePath: [],
+    undos: [],
+    destinationDropped: false,
+    loadingPath: false,
     setPanelPosition: { lat: 0, lng: 0 },
     origin: {
       place_id: null,
@@ -40,15 +48,46 @@ class MapPanel extends Component {
       loadingOptions: false,
     },
   }
+  state = { ...this.initialState }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (prevProps.mapMode !== this.props.mapMode) {
+      if (this.props.mapMode === MAP_MODE.ADD_ROUTE) {
+        this.setState({
+          ...this.initialState,
+          origin: {
+            ...this.initialState.origin,
+            lat: this.mapRef.getCenter().lat(),
+            lng: this.mapRef.getCenter().lng(),
+          },
+          addingRoute: ADD_ROUTE.SETTING_ORIGIN,
+        })
+        this.props.toggleSearchPanel(false)
+      }
+    }
+  }
+
+  handleManually = (event, ...args) => {
+    this.mapRef.context.__SECRET_MAP_DO_NOT_USE_OR_YOU_WILL_BE_FIRED[event](
+      ...args
+    )
+  }
 
   handleClick = e => {
-    this.setState({
-      visibleSetPanel: true,
-      setPanelPosition: {
-        lat: e.latLng.lat(),
-        lng: e.latLng.lng(),
-      },
-    })
+    const { mapMode } = this.props
+    const lat = e.latLng.lat()
+    const lng = e.latLng.lng()
+    if (mapMode === MAP_MODE.VIEW)
+      this.setState({
+        visibleSetPanel: true,
+        setPanelPosition: { lat, lng },
+      })
+    if (mapMode === MAP_MODE.ADD_ROUTE) {
+      if (this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN) {
+        this.setState({ origin: { ...this.state.origin, lat, lng } })
+        this.handleManually('setCenter', { lat, lng })
+      }
+    }
   }
 
   handleCloseSetPanel = () => {
@@ -201,11 +240,30 @@ class MapPanel extends Component {
     }
   }
 
+  getPath = e => {
+    const lat = e.latLng.lat()
+    const lng = e.latLng.lng()
+    this.setState({ destination: { ...this.state.destination, lat, lng } })
+    debounce(DEBOUNCE_ACTIONS.GET_PATH, 200, async () => {
+      const lastNode = this.state.newPath[this.state.newPath.length - 1]
+      this.setState({ loadingPath: true })
+      const {
+        data: { path },
+      } = await Axios.get(
+        '/api/snapToRoad?' + qs.stringify({ path: [lastNode, { lat, lng }] })
+      )
+
+      if (!this.state.destinationDropped) {
+        this.setState({ tentativePath: path })
+      }
+      this.setState({ loadingPath: false })
+    })
+  }
+
   render() {
     const options = {
       styles: mapStyles,
       disableDefaultUI: true,
-      minZoom: 6,
     }
     return (
       <Fragment>
@@ -217,6 +275,64 @@ class MapPanel extends Component {
             destination={this.state.destination}
           />
         )}
+        {this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN && (
+          <div style={{ position: 'absolute', top: 49, width: '100%' }}>
+            <Button
+              color="blue"
+              fluid
+              style={{ borderRadius: 0 }}
+              onClick={() => {
+                const { lat, lng } = this.state.origin
+                this.setState({
+                  addingRoute: ADD_ROUTE.ADDING_POINTS,
+                  destination: { ...this.state.destination, lat, lng },
+                  newPath: [{ lat, lng }],
+                })
+              }}
+            >
+              Set Origin
+            </Button>
+          </div>
+        )}
+        {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS && (
+          <div style={{ position: 'absolute', top: 49, width: '100%' }}>
+            <Button
+              loading={this.state.loadingPath}
+              color="blue"
+              fluid
+              style={{ borderRadius: 0 }}
+              onClick={() => {
+                if (this.state.newPath.length === 1) {
+                  this.setState({
+                    addingRoute: ADD_ROUTE.SETTING_ORIGIN,
+                    newPath: [],
+                    tentativePath: [],
+                    undos: [],
+                  })
+                } else {
+                  const undos = this.state.undos
+                  const last = undos.pop()
+                  this.setState({
+                    undos,
+                    newPath: this.state.newPath.slice(
+                      0,
+                      this.state.newPath.length - last.length
+                    ),
+                    destination: {
+                      ...this.state.destination,
+                      lat: last.lat,
+                      lng: last.lng,
+                    },
+                    tentativePath: [],
+                  })
+                }
+              }}
+            >
+              <Icon name="undo" />
+              Undo
+            </Button>
+          </div>
+        )}
         <GoogleMap
           ref={mapRef => (this.mapRef = mapRef)}
           clickableIcons={false}
@@ -225,32 +341,106 @@ class MapPanel extends Component {
           options={options}
           onClick={this.handleClick}
         >
-          {this.state.visibleSetPanel && (
-            <SetPanel
-              origin={this.state.origin}
-              destination={this.state.destination}
-              setPlace={this.setPlace}
-              position={this.state.setPanelPosition}
-              onCloseClick={this.handleCloseSetPanel}
-            />
+          {this.props.mapMode === MAP_MODE.VIEW && (
+            <Fragment>
+              {this.state.visibleSetPanel && (
+                <SetPanel
+                  origin={this.state.origin}
+                  destination={this.state.destination}
+                  setPlace={this.setPlace}
+                  position={this.state.setPanelPosition}
+                  onCloseClick={this.handleCloseSetPanel}
+                />
+              )}
+              {this.state.origin.place_id && (
+                <Marker
+                  icon={originLogo}
+                  position={{
+                    lat: this.state.origin.lat,
+                    lng: this.state.origin.lng,
+                  }}
+                />
+              )}
+              {this.state.destination.place_id && (
+                <Marker
+                  icon={destinationLogo}
+                  position={{
+                    lat: this.state.destination.lat,
+                    lng: this.state.destination.lng,
+                  }}
+                />
+              )}
+            </Fragment>
           )}
-          {this.state.origin.place_id && (
-            <Marker
-              icon={originLogo}
-              position={{
-                lat: this.state.origin.lat,
-                lng: this.state.origin.lng,
-              }}
-            />
-          )}
-          {this.state.destination.place_id && (
-            <Marker
-              icon={destinationLogo}
-              position={{
-                lat: this.state.destination.lat,
-                lng: this.state.destination.lng,
-              }}
-            />
+          {this.props.mapMode === MAP_MODE.ADD_ROUTE && (
+            <Fragment>
+              {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS && (
+                <Fragment>
+                  <Marker
+                    draggable
+                    icon={destinationLogo}
+                    onDrag={this.getPath}
+                    onDragStart={() => {
+                      this.setState({ destinationDropped: false })
+                    }}
+                    onDragEnd={() => {
+                      const lastNode = this.state.tentativePath[
+                        this.state.tentativePath.length - 1
+                      ]
+                      if (!lastNode) return
+                      this.setState({
+                        destinationDropped: true,
+                        newPath: this.state.newPath.concat(
+                          this.state.tentativePath
+                        ),
+                        undos: this.state.undos.concat({
+                          length: this.state.tentativePath.length,
+                          lat: this.state.newPath[this.state.newPath.length - 1]
+                            .lat,
+                          lng: this.state.newPath[this.state.newPath.length - 1]
+                            .lng,
+                        }),
+                        tentativePath: [],
+                        destination: {
+                          ...this.state.destination,
+                          lat: lastNode.lat,
+                          lng: lastNode.lng,
+                        },
+                      })
+                    }}
+                    position={{
+                      lat: this.state.destination.lat,
+                      lng: this.state.destination.lng,
+                    }}
+                  />
+                  <Polyline
+                    options={{
+                      strokeColor: '#db2828',
+                      strokeWeight: 5,
+                    }}
+                    path={[
+                      this.state.newPath[this.state.newPath.length - 1],
+                    ].concat(this.state.tentativePath)}
+                  />
+                  <Polyline
+                    options={{
+                      strokeColor: '#2185d0',
+                      strokeWeight: 5,
+                    }}
+                    path={this.state.newPath}
+                  />
+                </Fragment>
+              )}
+              <Marker
+                draggable={this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN}
+                onDragEnd={this.handleClick}
+                icon={originLogo}
+                position={{
+                  lat: this.state.origin.lat,
+                  lng: this.state.origin.lng,
+                }}
+              />
+            </Fragment>
           )}
         </GoogleMap>
       </Fragment>
