@@ -21,7 +21,6 @@ import { DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
 
 class MapPanel extends Component {
   state = {
-    zoom: 14,
     visibleSetPanel: false,
     setPanelPosition: { lat: 0, lng: 0 },
     origin: {
@@ -203,13 +202,11 @@ class MapPanel extends Component {
   }
 
   render() {
-    const { mapMode } = this.props
     const options = {
       styles: mapStyles,
       disableDefaultUI: true,
-      minZoom: mapMode === MAP_MODE.VIEW ? 6 : 16,
+      minZoom: 6,
     }
-    console.log(mapMode)
     return (
       <Fragment>
         {this.props.visibleSearchPanel && (
@@ -224,16 +221,9 @@ class MapPanel extends Component {
           ref={mapRef => (this.mapRef = mapRef)}
           clickableIcons={false}
           defaultCenter={{ lat: 14.1686279, lng: 121.2424038 }}
+          defaultZoom={14}
           options={options}
-          zoom={this.state.zoom}
           onClick={this.handleClick}
-          onZoomChanged={() => {
-            if (this.mapRef.getZoom() < options.minZoom) {
-              this.setState({ zoom: options.minZoom })
-            } else {
-              this.setState({ zoom: this.mapRef.getZoom() })
-            }
-          }}
         >
           {this.state.visibleSetPanel && (
             <SetPanel
@@ -244,20 +234,24 @@ class MapPanel extends Component {
               onCloseClick={this.handleCloseSetPanel}
             />
           )}
-          <Marker
-            icon={originLogo}
-            position={{
-              lat: this.state.origin.lat,
-              lng: this.state.origin.lng,
-            }}
-          />
-          <Marker
-            icon={destinationLogo}
-            position={{
-              lat: this.state.destination.lat,
-              lng: this.state.destination.lng,
-            }}
-          />
+          {this.state.origin.place_id && (
+            <Marker
+              icon={originLogo}
+              position={{
+                lat: this.state.origin.lat,
+                lng: this.state.origin.lng,
+              }}
+            />
+          )}
+          {this.state.destination.place_id && (
+            <Marker
+              icon={destinationLogo}
+              position={{
+                lat: this.state.destination.lat,
+                lng: this.state.destination.lng,
+              }}
+            />
+          )}
         </GoogleMap>
       </Fragment>
     )
