@@ -7,7 +7,7 @@ import { PlatformProvider } from './providers/PlatformProvider'
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { SessionProvider } from './providers/SessionProvider'
-import registerServiceWorker from './registerServiceWorker'
+// import registerServiceWorker from './registerServiceWorker'
 
 ReactDOM.render(
   <PlatformProvider>
@@ -19,4 +19,5 @@ ReactDOM.render(
   </PlatformProvider>,
   document.getElementById('root')
 )
-registerServiceWorker()
+
+// registerServiceWorker()

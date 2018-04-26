@@ -55,6 +55,7 @@ class Nav extends Component {
         size="huge"
         attached="top"
         style={{
+          height: 49,
           margin: 0,
           borderTop: 0,
           borderRight: 0,

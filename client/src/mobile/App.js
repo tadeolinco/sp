@@ -7,16 +7,23 @@ import { MAP_MODE } from '../constants'
 
 class App extends Component {
   state = {
-    visible: false,
+    visible: true,
     mapMode: MAP_MODE.VIEW,
   }
 
   changeMapMode = mapMode => this.setState({ mapMode })
 
   toggleVisible = visible => {
-    this.setState({
-      visible: typeof visible === 'boolean' ? visible : !this.state.visible,
-    })
+    this.setState(
+      {
+        visible: typeof visible === 'boolean' ? visible : !this.state.visible,
+      },
+      () => {
+        if (this.state.visible) {
+          this.changeMapMode(MAP_MODE.VIEW)
+        }
+      }
+    )
   }
 
   render() {
@@ -28,19 +35,23 @@ class App extends Component {
             changeMapMode={this.changeMapMode}
           />
         </div>
-        <MapPanel
-          mapMode={this.state.mapMode}
-          visibleSearchPanel={this.state.visible}
-          toggleSearchPanel={this.toggleVisible}
-          containerElement={
-            <div
-              style={{
-                paddingTop: this.state.visible ? 76 : 0,
-                height: `calc(100vh - 49px)`,
-              }}
-            />
-          }
-        />
+        {this.divElement && (
+          <MapPanel
+            topHeight={this.divElement.clientHeight}
+            mapMode={this.state.mapMode}
+            visibleSearchPanel={this.state.visible}
+            toggleSearchPanel={this.toggleVisible}
+            changeMapMode={this.changeMapMode}
+            containerElement={
+              <div
+                style={{
+                  paddingTop: this.state.visible ? 76 : 0,
+                  height: `calc(100vh - ${this.divElement.clientHeight}px)`,
+                }}
+              />
+            }
+          />
+        )}
       </Fragment>
     )
   }

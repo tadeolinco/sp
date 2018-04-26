@@ -1,3 +1,5 @@
+import { ADD_ROUTE, DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
+import { Button, Icon } from 'semantic-ui-react'
 import {
   GoogleMap,
   Marker,
@@ -9,6 +11,7 @@ import React, { Component, Fragment } from 'react'
 import { compose, withProps } from 'recompose'
 
 import Axios from 'axios'
+import RouteFormModal from './RouteFormModal'
 import SearchPanel from './SearchPanel'
 import SetPanel from './SetPanel'
 import debounce from '../../util/debounce'
@@ -18,8 +21,6 @@ import originLogo from './assets/origin.svg'
 import qs from 'qs'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
-import { DEBOUNCE_ACTIONS, MAP_MODE, ADD_ROUTE } from '../../constants'
-import { Button, Icon } from 'semantic-ui-react'
 
 class MapPanel extends Component {
   initialState = {
@@ -52,9 +53,9 @@ class MapPanel extends Component {
 
   componentDidUpdate(prevProps, prevState) {
     if (prevProps.mapMode !== this.props.mapMode) {
+      this.setState({ ...this.initialState })
       if (this.props.mapMode === MAP_MODE.ADD_ROUTE) {
         this.setState({
-          ...this.initialState,
           origin: {
             ...this.initialState.origin,
             lat: this.mapRef.getCenter().lat(),
@@ -73,7 +74,7 @@ class MapPanel extends Component {
     )
   }
 
-  handleClick = e => {
+  handleMapClick = async e => {
     const { mapMode } = this.props
     const lat = e.latLng.lat()
     const lng = e.latLng.lng()
@@ -86,6 +87,19 @@ class MapPanel extends Component {
       if (this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN) {
         this.setState({ origin: { ...this.state.origin, lat, lng } })
         this.handleManually('setCenter', { lat, lng })
+      } else if (this.state.addingRoute === ADD_ROUTE.ADDING_POINTS) {
+        this.setState({
+          destination: { ...this.state.destination, lat, lng },
+          loadingPath: true,
+        })
+        const lastNode = this.state.newPath[this.state.newPath.length - 1]
+        const {
+          data: { path },
+        } = await Axios.get(
+          '/api/snapToRoad?' + qs.stringify({ path: [lastNode, { lat, lng }] })
+        )
+        this.setState({ tentativePath: path, loadingPath: false })
+        this.handleApplyTentativePath()
       }
     }
   }
@@ -94,7 +108,7 @@ class MapPanel extends Component {
     this.setState({ visibleSetPanel: false })
   }
 
-  fitMarkers = () => {
+  handleFitMarkers = () => {
     const { LatLng, LatLngBounds } = window.google.maps
 
     const originLocation = new LatLng(
@@ -122,7 +136,7 @@ class MapPanel extends Component {
     }
   }
 
-  setPlace = async place => {
+  handleSetPlace = async place => {
     try {
       this.setState({
         [place]: {
@@ -138,6 +152,7 @@ class MapPanel extends Component {
             lng: this.state.setPanelPosition.lng,
           })
       )
+      if (this.props.mapMode !== MAP_MODE.VIEW) return
 
       this.setState(
         {
@@ -155,7 +170,7 @@ class MapPanel extends Component {
           visibleSetPanel: false,
         },
         () => {
-          this.fitMarkers()
+          this.handleFitMarkers()
           this.props.toggleSearchPanel(true)
         }
       )
@@ -226,7 +241,7 @@ class MapPanel extends Component {
             lng: data.location.lng,
           },
         },
-        this.fitMarkers
+        this.handleFitMarkers
       )
     } catch ({ response }) {
       this.props.notifications.addMessage(response.data.message, 'error')
@@ -240,7 +255,7 @@ class MapPanel extends Component {
     }
   }
 
-  getPath = e => {
+  handleGetPath = e => {
     const lat = e.latLng.lat()
     const lng = e.latLng.lng()
     this.setState({ destination: { ...this.state.destination, lat, lng } })
@@ -260,6 +275,80 @@ class MapPanel extends Component {
     })
   }
 
+  handleUndo = e => {
+    if (this.state.newPath.length === 1) {
+      this.setState({
+        addingRoute: ADD_ROUTE.SETTING_ORIGIN,
+        newPath: [],
+        tentativePath: [],
+        undos: [],
+      })
+      this.handleManually('setCenter', {
+        lat: this.state.origin.lat,
+        lng: this.state.origin.lng,
+      })
+    } else {
+      const undos = this.state.undos
+      const last = undos.pop()
+      this.setState({
+        undos,
+        newPath: this.state.newPath.slice(
+          0,
+          this.state.newPath.length - last.length
+        ),
+        destination: {
+          ...this.state.destination,
+          lat: last.lat,
+          lng: last.lng,
+        },
+        tentativePath: [],
+      })
+
+      this.handleManually('setCenter', { lat: last.lat, lng: last.lng })
+    }
+  }
+
+  handleSetOrigin = () => {
+    const { lat, lng } = this.state.origin
+    this.setState({
+      addingRoute: ADD_ROUTE.ADDING_POINTS,
+      destination: { ...this.state.destination, lat, lng },
+      newPath: [{ lat, lng }],
+    })
+  }
+
+  handleApplyTentativePath = () => {
+    this.setState({ destinationDropped: true })
+    const lastNode = this.state.tentativePath[
+      this.state.tentativePath.length - 1
+    ]
+
+    if (!lastNode) {
+      return this.setState({
+        destination: {
+          ...this.state.destination,
+          lat: this.state.newPath[this.state.newPath.length - 1].lat,
+          lng: this.state.newPath[this.state.newPath.length - 1].lng,
+        },
+      })
+    }
+    this.setState({
+      newPath: this.state.newPath.concat(this.state.tentativePath),
+      undos: this.state.undos.concat({
+        length: this.state.tentativePath.length,
+        lat: this.state.newPath[this.state.newPath.length - 1].lat,
+        lng: this.state.newPath[this.state.newPath.length - 1].lng,
+      }),
+      tentativePath: [],
+      destination: {
+        ...this.state.destination,
+        lat: lastNode.lat,
+        lng: lastNode.lng,
+      },
+    })
+    this.handleManually('setCenter', { lat: lastNode.lat, lng: lastNode.lng })
+  }
+
   render() {
     const options = {
       styles: mapStyles,
@@ -276,70 +365,82 @@ class MapPanel extends Component {
           />
         )}
         {this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN && (
-          <div style={{ position: 'absolute', top: 49, width: '100%' }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: this.props.topHeight,
+              width: '100%',
+            }}
+          >
             <Button
               color="blue"
               fluid
               style={{ borderRadius: 0 }}
-              onClick={() => {
-                const { lat, lng } = this.state.origin
-                this.setState({
-                  addingRoute: ADD_ROUTE.ADDING_POINTS,
-                  destination: { ...this.state.destination, lat, lng },
-                  newPath: [{ lat, lng }],
-                })
-              }}
+              onClick={this.handleSetOrigin}
             >
               Set Origin
             </Button>
           </div>
         )}
-        {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS && (
-          <div style={{ position: 'absolute', top: 49, width: '100%' }}>
+        {this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN && (
+          <div style={{ position: 'absolute', bottom: 0, width: '100%' }}>
             <Button
-              loading={this.state.loadingPath}
-              color="blue"
+              color="red"
               fluid
               style={{ borderRadius: 0 }}
-              onClick={() => {
-                if (this.state.newPath.length === 1) {
-                  this.setState({
-                    addingRoute: ADD_ROUTE.SETTING_ORIGIN,
-                    newPath: [],
-                    tentativePath: [],
-                    undos: [],
-                  })
-                } else {
-                  const undos = this.state.undos
-                  const last = undos.pop()
-                  this.setState({
-                    undos,
-                    newPath: this.state.newPath.slice(
-                      0,
-                      this.state.newPath.length - last.length
-                    ),
-                    destination: {
-                      ...this.state.destination,
-                      lat: last.lat,
-                      lng: last.lng,
-                    },
-                    tentativePath: [],
-                  })
-                }
-              }}
+              onClick={() => this.props.changeMapMode(MAP_MODE.VIEW)}
+            >
+              <Icon name="undo" />
+              Back
+            </Button>
+          </div>
+        )}
+        {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS && (
+          <div style={{ position: 'absolute', bottom: 0, width: '100%' }}>
+            <Button
+              loading={this.state.loadingPath}
+              color="red"
+              fluid
+              style={{ borderRadius: 0 }}
+              onClick={this.handleUndo}
             >
               <Icon name="undo" />
               Undo
             </Button>
           </div>
         )}
+        {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS &&
+          this.state.newPath.length > 1 && (
+            <div
+              style={{
+                position: 'absolute',
+                top: this.props.topHeight,
+                width: '100%',
+              }}
+            >
+              <RouteFormModal
+                mapPanel={this}
+                trigger={
+                  <Button
+                    color="blue"
+                    fluid
+                    style={{ borderRadius: 0 }}
+                    onClick={this.undo}
+                  >
+                    <Icon name="check" />
+                    Done
+                  </Button>
+                }
+              />
+            </div>
+          )}
         <GoogleMap
           ref={mapRef => (this.mapRef = mapRef)}
           clickableIcons={false}
           defaultCenter={{ lat: 14.1686279, lng: 121.2424038 }}
           defaultZoom={14}
           options={options}
-          onClick={this.handleClick}
+          onClick={this.handleMapClick}
         >
           {this.props.mapMode === MAP_MODE.VIEW && (
             <Fragment>
@@ -347,7 +448,7 @@ class MapPanel extends Component {
                 <SetPanel
                   origin={this.state.origin}
                   destination={this.state.destination}
-                  setPlace={this.setPlace}
+                  handleSetPlace={this.handleSetPlace}
                   position={this.state.setPanelPosition}
                   onCloseClick={this.handleCloseSetPanel}
                 />
@@ -379,35 +480,11 @@ class MapPanel extends Component {
                   <Marker
                     draggable
                     icon={destinationLogo}
-                    onDrag={this.getPath}
+                    onDrag={this.handleGetPath}
                     onDragStart={() => {
                       this.setState({ destinationDropped: false })
                     }}
-                    onDragEnd={() => {
-                      const lastNode = this.state.tentativePath[
-                        this.state.tentativePath.length - 1
-                      ]
-                      if (!lastNode) return
-                      this.setState({
-                        destinationDropped: true,
-                        newPath: this.state.newPath.concat(
-                          this.state.tentativePath
-                        ),
-                        undos: this.state.undos.concat({
-                          length: this.state.tentativePath.length,
-                          lat: this.state.newPath[this.state.newPath.length - 1]
-                            .lat,
-                          lng: this.state.newPath[this.state.newPath.length - 1]
-                            .lng,
-                        }),
-                        tentativePath: [],
-                        destination: {
-                          ...this.state.destination,
-                          lat: lastNode.lat,
-                          lng: lastNode.lng,
-                        },
-                      })
-                    }}
+                    onDragEnd={this.handleApplyTentativePath}
                     position={{
                       lat: this.state.destination.lat,
                       lng: this.state.destination.lng,
@@ -433,7 +510,7 @@ class MapPanel extends Component {
               )}
               <Marker
                 draggable={this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN}
-                onDragEnd={this.handleClick}
+                onDragEnd={this.handleMapClick}
                 icon={originLogo}
                 position={{
                   lat: this.state.origin.lat,

@@ -6,6 +6,7 @@ import * as express from 'express'
 import * as logger from 'morgan'
 import * as session from 'express-session'
 import * as store from 'express-mysql-session'
+import * as path from 'path'
 
 import { createConnection } from 'typeorm'
 import router from './router'
@@ -38,6 +39,9 @@ createConnection()
 
     app.use('/api', router)
 
+    app.use('/', express.static(path.join(__dirname, 'build')))
+
+    app.use('*', (req, res) => res.redirect('/'))
     const port = process.env.PORT || 3001
 
     // start express server

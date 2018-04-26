@@ -5,7 +5,7 @@ import React from 'react'
 const SetPanel = ({
   position,
   onCloseClick,
-  setPlace,
+  handleSetPlace,
   origin,
   destination,
 }) => {
@@ -18,7 +18,7 @@ const SetPanel = ({
           loading={origin.loadingPlace}
           color="blue"
           onClick={() => {
-            setPlace('origin')
+            handleSetPlace('origin')
           }}
         >
           Origin
@@ -29,7 +29,7 @@ const SetPanel = ({
           fluid
           loading={destination.loadingPlace}
           onClick={() => {
-            setPlace('destination')
+            handleSetPlace('destination')
           }}
         >
           Destination
