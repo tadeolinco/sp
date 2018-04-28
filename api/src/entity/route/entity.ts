@@ -9,6 +9,7 @@ import {
 } from 'typeorm'
 import Node from '../node/entity'
 import User from '../user/entity'
+import { DESTRUCTION } from 'dns'
 
 @Entity()
 class Route {
@@ -17,6 +18,8 @@ class Route {
   @Column() fare: number
 
   @Column() mode: string
+
+  @Column() description: string
 
   @ManyToOne(type => User, user => user.routes)
   owner: User

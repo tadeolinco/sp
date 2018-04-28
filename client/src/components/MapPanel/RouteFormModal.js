@@ -3,22 +3,38 @@ import React, { Component } from 'react'
 
 import Axios from 'axios'
 import withForm from '../../util/withForm'
+import { withNotifications } from '../../providers/NotificationsProvider'
+import { MAP_MODE } from '../../constants'
 
 const modes = ['Jeepney', 'Bus', 'Train', 'Shuttle Service', 'UV Express'].map(
   mode => ({ text: mode, value: mode })
 )
 
 class RouteFormModal extends Component {
-  initialState = {
+  state = {
     loading: false,
-    originName: 'Loading...',
-    destinationName: 'Loading...',
   }
 
-  state = { ...this.initialState }
-
-  handleSubmit = e => {
+  handleSubmit = async e => {
     e.preventDefault()
+    const { mapPanel, notifications, form } = this.props
+    try {
+      notifications.addMessage('This might take some time...', 'info')
+      mapPanel.props.changeMapMode(MAP_MODE.VIEW)
+      const {
+        data: { route },
+      } = await Axios.post('/api/routes', {
+        path: mapPanel.state.newPath,
+        mode: form.values.modeOfTransportation,
+        description: form.values.description,
+      })
+      notifications.addMessage('Successfully added route!', 'success')
+      mapPanel.setState({ routes: [...mapPanel.state.routes, route] })
+    } catch ({ response }) {
+      notifications.clear(() => {
+        notifications.addMessage(response.data.message, 'error')
+      })
+    }
   }
 
   handleOnClose = () => {
@@ -27,7 +43,7 @@ class RouteFormModal extends Component {
   }
 
   render() {
-    const { trigger, form, mapPanel } = this.props
+    const { trigger, form } = this.props
     const style = { marginTop: 0, width: '100%' }
     return (
       <Modal
@@ -37,7 +53,7 @@ class RouteFormModal extends Component {
         onClose={this.handleOnClose}
         ref={modalRef => (this.modalRef = modalRef)}
       >
-        <Modal.Header>Add Form</Modal.Header>
+        <Modal.Header>Add Route</Modal.Header>
 
         <Modal.Content>
           {!!form.errors.length && <Message error list={form.errors} />}
@@ -64,9 +80,11 @@ class RouteFormModal extends Component {
   }
 }
 
-export default withForm(RouteFormModal, {
-  modeOfTransportation: {
-    initialValue: modes[0].value,
-  },
-  description: {},
-})
+export default withNotifications(
+  withForm(RouteFormModal, {
+    modeOfTransportation: {
+      initialValue: modes[0].value,
+    },
+    description: {},
+  })
+)

@@ -25,8 +25,10 @@ class LoginModal extends Component {
       notifications.addMessage(`Hi ${user.username}!`, 'success')
       session.changeUser(user)
     } catch ({ response }) {
-      notifications.addMessage(response.data.message, 'error')
-      this.setState({ loading: false })
+      notifications.clear(() => {
+        notifications.addMessage(response.data.message, 'error')
+        this.setState({ loading: false })
+      })
     }
   }
 

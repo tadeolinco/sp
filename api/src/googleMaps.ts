@@ -13,6 +13,10 @@ export const snapToRoads = async path => {
     })
     .asPromise()
 
+  if (!response.json.snappedPoints) {
+    return null
+  }
+
   const points = response.json.snappedPoints.map(({ location }) => ({
     lat: location.latitude,
     lng: location.longitude,

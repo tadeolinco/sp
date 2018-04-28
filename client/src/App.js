@@ -18,10 +18,12 @@ class App extends Component {
       } = await Axios.post('/api/session')
       session.changeUser(user)
       if (user) {
-        notifications.addMessage(`Welcome back, ${user.username}!`, 'success')
+        notifications.addMessage(`Welcome, ${user.username}!`, 'success')
       }
     } catch ({ response }) {
-      notifications.addMessage(response.data.message, 'error')
+      notifications.clear(() => {
+        notifications.addMessage(response.data.message, 'error')
+      })
     } finally {
       this.setState({ loading: false })
     }

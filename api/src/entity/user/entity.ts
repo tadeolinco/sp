@@ -18,6 +18,9 @@ class User {
 
   @Column() password: string
 
+  @Column({ default: false })
+  hasCreatedRoute: boolean
+
   @OneToMany(type => Route, route => route.owner)
   routes: Route[]
 

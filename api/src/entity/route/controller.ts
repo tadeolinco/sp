@@ -15,6 +15,11 @@ const controller = {
     handler: async (req, res) => {
       try {
         const path = await snapToRoads(req.query.path)
+        if (!path) {
+          res
+            .status(400)
+            .json({ message: 'Cannot trace route from these points.' })
+        }
         res.status(200).json({ path })
       } catch (err) {
         console.log(err)
@@ -29,9 +34,13 @@ const controller = {
     middlewares: [],
     handler: async (req, res) => {
       try {
-        const path = await getPath(req.query.origin, req.query.destination)
+        // const path = await getPath(req.query.origin, req.query.destination)
 
-        res.status(200).json({ data: path })
+        // res.status(200).json({ data: path })
+
+        const routeRepository = getRepository(Route)
+        const routes = await routeRepository.find({ relations: ['nodes'] })
+        res.status(200).json({ routes })
       } catch (err) {
         console.log(err.message)
         res.status(500).json({ message: 'Internal server error.' })
@@ -54,9 +63,11 @@ const controller = {
         const routeRepository = getRepository(Route)
         const nodeRepository = getRepository(Node)
 
-        const route = await routeRepository.save({
+        let route: any = await routeRepository.save({
           owner: req.session.user,
           mode: req.body.mode,
+          description: req.body.description,
+          fare: 8,
         })
 
         const allNodes = await nodeRepository.find({ relations: ['paths'] })
@@ -74,7 +85,7 @@ const controller = {
           }
 
           // connect this node with the latest new node
-          if (latestNode && !req.body.isOneWay) {
+          if (latestNode) {
             paths.push(latestNode)
           }
           const newNode = await nodeRepository.save({ ...node, paths, route })
@@ -86,8 +97,10 @@ const controller = {
           }
           latestNode = newNode
         }
-
-        res.status(200).json({ data: route })
+        route = await routeRepository.findOneById(route.id, {
+          relations: ['nodes'],
+        })
+        res.status(200).json({ route })
       } catch (err) {
         console.log(err)
         res.status(500).json({ message: 'Internal server error.' })
