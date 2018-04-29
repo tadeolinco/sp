@@ -60,7 +60,7 @@ class MapPanel extends Component {
       this.setState({ routes })
     } catch ({ response }) {
       this.props.notifications.clear(() => {
-        this.props.notifications.addMessage(response.data.message, 'error')
+        this.props.notifications.enqueue(response.data.message, 'error')
       })
     }
   }
@@ -79,17 +79,17 @@ class MapPanel extends Component {
           addingRoute: ADD_ROUTE.SETTING_ORIGIN,
         })
         this.props.notifications.clear(() => {
-          this.props.notifications.addMessage(
+          this.props.notifications.enqueue(
             'Set the origin of the route by clicking on the map.',
             'info',
             3000
           )
-          this.props.notifications.addMessage(
+          this.props.notifications.enqueue(
             'You can also drag the blue marker around on the map to set the origin.',
             'info',
             3000
           )
-          this.props.notifications.addMessage(
+          this.props.notifications.enqueue(
             'Click on the "Set Origin" button once you\'re done, or if you want to cancel, just go back.',
             'info',
             5000
@@ -136,7 +136,7 @@ class MapPanel extends Component {
           this.handleApplyTentativePath()
         } catch ({ response }) {
           this.props.notifications.clear(() => {
-            this.props.notifications.addMessage(response.data.message, 'error')
+            this.props.notifications.enqueue(response.data.message, 'error')
           })
         } finally {
           this.setState({ loadingPath: false })
@@ -217,7 +217,7 @@ class MapPanel extends Component {
       )
     } catch ({ response }) {
       this.props.notifications.clear(() => {
-        this.props.notifications.addMessage(response.data.message, 'error')
+        this.props.notifications.enqueue(response.data.message, 'error')
       })
     } finally {
       this.setState({
@@ -254,7 +254,7 @@ class MapPanel extends Component {
           })
         } catch ({ response }) {
           this.props.notifications.clear(() => {
-            this.props.notifications.addMessage(response.data.message, 'error')
+            this.props.notifications.enqueue(response.data.message, 'error')
           })
         } finally {
           this.setState({
@@ -290,7 +290,7 @@ class MapPanel extends Component {
       )
     } catch ({ response }) {
       this.props.notifications.clear(() => {
-        this.props.notifications.addMessage(response.data.message, 'error')
+        this.props.notifications.enqueue(response.data.message, 'error')
       })
     } finally {
       this.setState({
@@ -364,25 +364,25 @@ class MapPanel extends Component {
       newPath: [{ lat, lng }],
     })
     notifications.clear(() => {
-      notifications.addMessage(
+      notifications.enqueue(
         'Click on the map to trace your route. Using smaller gaps between points to help us trace your route better.',
         'info',
         5000
       )
-      notifications.addMessage(
+      notifications.enqueue(
         'Big gaps or sharp turns tend to make our traces a bit wonky, if that happens you can always undo the last point then try again.',
         'info',
         5000
       )
 
-      notifications.addMessage(
+      notifications.enqueue(
         'Dragging the marker around the map lets you see what the predicted trace will be. Release to save that trace.',
         'info',
         5000
       )
 
-      notifications.addMessage(
-        'Once you\'re satisfied with your route, click on "Add Route".',
+      notifications.enqueue(
+        `Once you're satisfied with your route, click on "Add Route".`,
         'info',
         3000
       )
@@ -504,7 +504,7 @@ class MapPanel extends Component {
               fluid
               style={{ borderRadius: 0 }}
               onClick={() => {
-                this.props.notifications.clear()
+                this.props.notifications.clear(() => {})
               }}
             >
               <Icon name="check" />

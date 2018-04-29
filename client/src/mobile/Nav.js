@@ -16,9 +16,9 @@ class Nav extends Component {
 
       session.changeUser(null)
 
-      this.props.notifications.addMessage(`Bye!`, 'success')
+      this.props.notifications.enqueue(`Bye!`, 'success')
     } catch ({ response }) {
-      this.props.notifications.addMessage(response.data.message, 'error')
+      this.props.notifications.enqueue(response.data.message, 'error')
     }
   }
 

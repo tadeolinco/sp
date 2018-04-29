@@ -1,6 +1,8 @@
 import React, { Component } from 'react'
 import { Transition, Message } from 'semantic-ui-react'
 
+const ANIMATION_DURATION = 1000
+
 const NotificationsContext = React.createContext()
 
 export const withNotifications = Component => props => (
@@ -13,18 +15,15 @@ export class NotificationsProvider extends Component {
   state = {
     messages: [],
     visible: false,
-    duration: 1000,
     timerId: null,
-    addMessage: (content, type = '', airTime = 2000, callback) => {
+    enqueue: (content, type = '', airTime = 2000) => {
       setTimeout(() => {
         this.setState(
           {
-            messages: this.state.messages.concat({ content, type, airTime }),
+            messages: [...this.state.messages, { content, type, airTime }],
           },
           () => {
-            if (this.state.messages.length === 1) {
-              this.transition()
-            }
+            if (this.state.messages.length === 1) this.transition()
           }
         )
       }, 0)
@@ -34,48 +33,49 @@ export class NotificationsProvider extends Component {
       if (this.state.timerId) {
         clearTimeout(this.state.timerId)
       }
-      this.setState({
-        timerId: null,
-        visible: false,
-      })
       setTimeout(() => {
-        this.setState({ messages: [] }, callback)
-      }, this.state.duration)
+        this.setState({ visible: false, timerId: null }, () => {
+          setTimeout(() => {
+            this.setState({ messages: [] }, callback)
+          }, ANIMATION_DURATION)
+        })
+      }, 0)
     },
 
-    pop: () => {
+    dequeue: () => {
       if (this.state.timerId) {
         clearTimeout(this.state.timerId)
       }
-      this.setState({
-        timerId: null,
-        visible: false,
-      })
       setTimeout(() => {
-        this.setState({ messages: this.state.messages.slice(1) }, () => {
-          if (this.state.messages.length) {
-            this.transition()
-          }
-        })
-      }, this.state.duration)
-    },
-  }
-
-  transition = () => {
-    setTimeout(() => {
-      const { duration } = this.state
-      this.setState({
-        visible: true,
-        timerId: setTimeout(() => {
-          this.setState({ visible: false })
+        this.setState({ visible: false, timerId: null }, () => {
           setTimeout(() => {
             this.setState({ messages: this.state.messages.slice(1) }, () => {
               if (this.state.messages.length) {
                 this.transition()
               }
             })
-          }, duration)
-        }, this.state.messages[0].airTime + duration),
+          }, ANIMATION_DURATION)
+        })
+      }, 0)
+    },
+  }
+
+  transition = () => {
+    const message = this.state.messages[0]
+    setTimeout(() => {
+      this.setState({
+        visible: true,
+        timerId: setTimeout(() => {
+          this.setState({ visible: false, timerId: null }, () => {
+            setTimeout(() => {
+              this.setState({ messages: this.state.messages.slice(1) }, () => {
+                if (this.state.messages.length) {
+                  this.transition()
+                }
+              })
+            }, ANIMATION_DURATION)
+          })
+        }, message.airTime + ANIMATION_DURATION),
       })
     }, 0)
   }
@@ -83,34 +83,33 @@ export class NotificationsProvider extends Component {
   render() {
     return (
       <NotificationsContext.Provider value={this.state}>
-        <Transition.Group animation="fly down" duration={this.state.duration}>
-          {this.state.visible &&
-            !!this.state.messages.length && (
-              <Message
-                onClick={this.state.pop}
+        <Transition.Group animation="fly down" duration={ANIMATION_DURATION}>
+          {this.state.visible && (
+            <Message
+              onClick={this.state.dequeue}
+              style={{
+                position: 'absolute',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+                left: '10%',
+                right: '10%',
+                top: 10,
+                zIndex: 2000,
+              }}
+              info={this.state.messages[0].type === 'info'}
+              warning={this.state.messages[0].type === 'warning'}
+              success={this.state.messages[0].type === 'success'}
+              error={this.state.messages[0].type === 'error'}
+            >
+              <div
                 style={{
-                  position: 'absolute',
-                  marginLeft: 'auto',
-                  marginRight: 'auto',
-                  left: '10%',
-                  right: '10%',
-                  top: 10,
-                  zIndex: 2000,
+                  textAlign: 'center',
                 }}
-                info={this.state.messages[0].type === 'info'}
-                warning={this.state.messages[0].type === 'warning'}
-                success={this.state.messages[0].type === 'success'}
-                error={this.state.messages[0].type === 'error'}
               >
-                <div
-                  style={{
-                    textAlign: 'center',
-                  }}
-                >
-                  {this.state.messages[0].content}
-                </div>
-              </Message>
-            )}
+                {this.state.messages[0].content}
+              </div>
+            </Message>
+          )}
         </Transition.Group>
         {this.props.children}
       </NotificationsContext.Provider>

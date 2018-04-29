@@ -20,10 +20,10 @@ class SignupModal extends Component {
       })
 
       this.modalRef.handleClose()
-      this.props.notifications.addMessage('Successfully signed up!', 'success')
+      this.props.notifications.enqueue('Successfully signed up!', 'success')
     } catch ({ response }) {
       this.props.notifications.clear(() => {
-        this.props.notifications.addMessage(response.data.message, 'error')
+        this.props.notifications.enqueue(response.data.message, 'error')
       })
     } finally {
       this.setState({ loading: false })

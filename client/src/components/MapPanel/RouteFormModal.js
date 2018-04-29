@@ -19,7 +19,8 @@ class RouteFormModal extends Component {
     e.preventDefault()
     const { mapPanel, notifications, form } = this.props
     try {
-      notifications.addMessage('This might take some time...', 'info')
+      console.log(notifications)
+      notifications.enqueue('This might take some time...', 'info')
       mapPanel.props.changeMapMode(MAP_MODE.VIEW)
       const {
         data: { route },
@@ -28,11 +29,12 @@ class RouteFormModal extends Component {
         mode: form.values.modeOfTransportation,
         description: form.values.description,
       })
-      notifications.addMessage('Successfully added route!', 'success')
+      notifications.enqueue('Successfully added route!', 'success')
+      console.log(notifications)
       mapPanel.setState({ routes: [...mapPanel.state.routes, route] })
     } catch ({ response }) {
       notifications.clear(() => {
-        notifications.addMessage(response.data.message, 'error')
+        notifications.enqueue(response.data.message, 'error')
       })
     }
   }

@@ -22,11 +22,11 @@ class LoginModal extends Component {
       })
 
       this.modalRef.handleClose()
-      notifications.addMessage(`Hi ${user.username}!`, 'success')
+      notifications.enqueue(`Hi ${user.username}!`, 'success')
       session.changeUser(user)
     } catch ({ response }) {
       notifications.clear(() => {
-        notifications.addMessage(response.data.message, 'error')
+        notifications.enqueue(response.data.message, 'error')
         this.setState({ loading: false })
       })
     }
