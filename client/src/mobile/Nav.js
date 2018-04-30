@@ -73,13 +73,6 @@ class Nav extends Component {
         <Menu.Item header style={{ padding: '15px 10px' }}>
           {title}
         </Menu.Item>
-        <Menu.Item
-          position="right"
-          style={{ paddingRight: 10 }}
-          onClick={this.props.toggleVisible}
-        >
-          <Icon name="search" />
-        </Menu.Item>
       </Menu>
     )
   }

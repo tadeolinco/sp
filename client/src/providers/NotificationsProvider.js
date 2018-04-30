@@ -36,7 +36,9 @@ export class NotificationsProvider extends Component {
       setTimeout(() => {
         this.setState({ visible: false, timerId: null }, () => {
           setTimeout(() => {
-            this.setState({ messages: [] }, callback)
+            this.setState({ messages: [] }, () => {
+              if (callback) callback()
+            })
           }, ANIMATION_DURATION)
         })
       }, 0)
@@ -84,32 +86,33 @@ export class NotificationsProvider extends Component {
     return (
       <NotificationsContext.Provider value={this.state}>
         <Transition.Group animation="fly down" duration={ANIMATION_DURATION}>
-          {this.state.visible && (
-            <Message
-              onClick={this.state.dequeue}
-              style={{
-                position: 'absolute',
-                marginLeft: 'auto',
-                marginRight: 'auto',
-                left: '10%',
-                right: '10%',
-                top: 10,
-                zIndex: 2000,
-              }}
-              info={this.state.messages[0].type === 'info'}
-              warning={this.state.messages[0].type === 'warning'}
-              success={this.state.messages[0].type === 'success'}
-              error={this.state.messages[0].type === 'error'}
-            >
-              <div
+          {this.state.visible &&
+            !!this.state.messages.length && (
+              <Message
+                onClick={this.state.dequeue}
                 style={{
-                  textAlign: 'center',
+                  position: 'absolute',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
+                  left: '10%',
+                  right: '10%',
+                  top: 10,
+                  zIndex: 2000,
                 }}
+                info={this.state.messages[0].type === 'info'}
+                warning={this.state.messages[0].type === 'warning'}
+                success={this.state.messages[0].type === 'success'}
+                error={this.state.messages[0].type === 'error'}
               >
-                {this.state.messages[0].content}
-              </div>
-            </Message>
-          )}
+                <div
+                  style={{
+                    textAlign: 'center',
+                  }}
+                >
+                  {this.state.messages[0].content}
+                </div>
+              </Message>
+            )}
         </Transition.Group>
         {this.props.children}
       </NotificationsContext.Provider>

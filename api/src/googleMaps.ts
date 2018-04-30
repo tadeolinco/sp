@@ -76,6 +76,7 @@ export const getPlace = async latlng => {
     place_id,
     location: geometry.location,
   }
+
   const map = { [place.name]: place.place_id }
   let options: any = await placesAutocomplete(place.name)
   for (const option of options) {
@@ -83,6 +84,7 @@ export const getPlace = async latlng => {
     map[option.name] = map[option.place_id]
   }
   options = Object.keys(map).map(name => ({ name, place_id: map[name] }))
+
   return { place, options }
 }
 

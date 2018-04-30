@@ -7,24 +7,10 @@ import { MAP_MODE } from '../constants'
 
 class App extends Component {
   state = {
-    visible: true,
     mapMode: MAP_MODE.VIEW,
   }
 
   changeMapMode = mapMode => this.setState({ mapMode })
-
-  toggleVisible = visible => {
-    this.setState(
-      {
-        visible: typeof visible === 'boolean' ? visible : !this.state.visible,
-      },
-      () => {
-        if (this.state.visible) {
-          this.changeMapMode(MAP_MODE.VIEW)
-        }
-      }
-    )
-  }
 
   render() {
     return (
@@ -39,8 +25,6 @@ class App extends Component {
           <MapPanel
             topHeight={this.divElement.clientHeight}
             mapMode={this.state.mapMode}
-            visibleSearchPanel={this.state.visible}
-            toggleSearchPanel={this.toggleVisible}
             changeMapMode={this.changeMapMode}
             containerElement={
               <div

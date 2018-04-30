@@ -5,26 +5,26 @@ import {
   ManyToOne,
   ManyToMany,
   JoinTable,
-} from 'typeorm';
-import User from '../user/entity';
-import Route from '../route/entity';
+} from 'typeorm'
+import User from '../user/entity'
+import Route from '../route/entity'
 
 @Entity()
 class Node {
-  @PrimaryGeneratedColumn() id: number;
+  @PrimaryGeneratedColumn() id: number
 
   @Column({ type: 'double' })
-  lat: number;
+  lat: number
 
   @Column({ type: 'double' })
-  lng: number;
+  lng: number
 
-  @ManyToOne(type => Route, route => route.nodes)
-  route: Route;
+  @ManyToOne(type => Route, route => route.nodes, { cascadeAll: true })
+  route: Route
 
-  @ManyToMany(type => Node)
+  @ManyToMany(type => Node, { cascadeInsert: true, cascadeUpdate: true })
   @JoinTable()
-  paths: Node[];
+  paths: Node[]
 }
 
-export default Node;
+export default Node

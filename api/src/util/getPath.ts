@@ -6,22 +6,40 @@ import Node from '../entity/node/entity'
 import computeDistance from './computeDistance'
 import { getDistance } from '../googleMaps'
 
-const constructPath = (cameFrom, current: Node) => {
-  const path = [current]
+const constructPath = (cameFrom, current) => {
+  let path = [current]
   while (cameFrom[current.id]) {
     current = cameFrom[current.id]
-    path.push(current)
+    path.unshift(current)
   }
 
-  return path.reverse().map(node => {
-    delete node.paths
-    return node
+  const routes = [path[0].route]
+  routes[0].nodes = []
+
+  path.forEach(node => {
+    const routeId = node.route.id
+    let route = routes[routes.length - 1]
+    if (node.route.id === route.id) {
+      route.nodes.push({ lat: node.lat, lng: node.lng, id: node.id })
+    } else {
+      routes.push(node.route)
+      route = routes[routes.length - 1]
+      route.nodes = [{ lat: node.lat, lng: node.lng, id: node.id }]
+    }
   })
+  for (const route of routes) {
+    console.log(route.id)
+    console.log(route.nodes)
+  }
+  return routes
 }
 
 const getPath = async (start, goal) => {
-  const nodeRepository = getRepository(Node)
-  const graph = await nodeRepository.find({ relations: ['paths', 'route'] })
+  const graph = await getRepository(Node).find({
+    relations: ['paths', 'route'],
+  })
+
+  if (!graph.length) return []
 
   let startMinDistance = Number.POSITIVE_INFINITY
   let newStart = graph[0]
@@ -29,6 +47,7 @@ const getPath = async (start, goal) => {
   let newGoal = graph[0]
   let distance = 0
 
+  /// Get nearest actual nodes from the start and goal
   for (const node of graph) {
     distance = computeDistance(node, start)
     if (distance < startMinDistance) {
@@ -68,9 +87,8 @@ const getPath = async (start, goal) => {
 
   while (!openSet.isEmpty()) {
     const current: Node = nodeMap[openSet.poll()]
-    console.log(current)
 
-    if (computeDistance(current, goal) < 5) {
+    if (current.id === goal.id) {
       return constructPath(cameFrom, goal)
     }
 
@@ -81,7 +99,14 @@ const getPath = async (start, goal) => {
 
       openSet.add(neighbor.id)
 
-      const tempG = gScore[current.id] + computeDistance(current, neighbor)
+      let tempG = gScore[current.id] + computeDistance(current, neighbor)
+      if (
+        nodeMap[neighbor.id].route.id !== current.route.id ||
+        (neighbor.lat === current.lat && neighbor.lng === current.lng)
+      ) {
+        tempG *= 2
+      }
+
       if (tempG >= gScore[neighbor.id]) continue
 
       cameFrom[neighbor.id] = current

@@ -8,7 +8,7 @@ const SearchPanel = ({
   handleSearchPanelChange,
 }) => {
   return (
-    <div style={{ position: 'absolute', top: 49, width: '100%' }}>
+    <div>
       <Dropdown
         className="truncate"
         placeholder="Origin"

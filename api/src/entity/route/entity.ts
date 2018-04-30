@@ -27,7 +27,10 @@ class Route {
   @ManyToMany(type => User, user => user.reports)
   reporters: User[]
 
-  @OneToMany(type => Node, node => node.route)
+  @OneToMany(type => Node, node => node.route, {
+    cascadeInsert: true,
+    cascadeUpdate: true,
+  })
   @JoinTable()
   nodes: Node[]
 }

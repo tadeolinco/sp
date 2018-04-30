@@ -4,6 +4,7 @@ import React, { Component } from 'react'
 import Axios from 'axios'
 import withForm from '../../util/withForm'
 import { withNotifications } from '../../providers/NotificationsProvider'
+import { withSession } from '../../providers/SessionProvider'
 import { MAP_MODE } from '../../constants'
 
 const modes = ['Jeepney', 'Bus', 'Train', 'Shuttle Service', 'UV Express'].map(
@@ -17,10 +18,11 @@ class RouteFormModal extends Component {
 
   handleSubmit = async e => {
     e.preventDefault()
-    const { mapPanel, notifications, form } = this.props
+    const { mapPanel, notifications, form, session } = this.props
     try {
-      console.log(notifications)
-      notifications.enqueue('This might take some time...', 'info')
+      notifications.clear(() => {
+        notifications.enqueue('This might take some time...', 'info')
+      })
       mapPanel.props.changeMapMode(MAP_MODE.VIEW)
       const {
         data: { route },
@@ -29,9 +31,15 @@ class RouteFormModal extends Component {
         mode: form.values.modeOfTransportation,
         description: form.values.description,
       })
-      notifications.enqueue('Successfully added route!', 'success')
-      console.log(notifications)
-      mapPanel.setState({ routes: [...mapPanel.state.routes, route] })
+      session.changeUser({ ...session.user, hasCreatedRoute: true })
+      notifications.clear(() => {
+        notifications.enqueue('Successfully added route!', 'success')
+      })
+      mapPanel.setState({
+        routes: [...mapPanel.state.routes, route].filter(
+          route => route.nodes.length
+        ),
+      })
     } catch ({ response }) {
       notifications.clear(() => {
         notifications.enqueue(response.data.message, 'error')
@@ -83,10 +91,12 @@ class RouteFormModal extends Component {
 }
 
 export default withNotifications(
-  withForm(RouteFormModal, {
-    modeOfTransportation: {
-      initialValue: modes[0].value,
-    },
-    description: {},
-  })
+  withSession(
+    withForm(RouteFormModal, {
+      modeOfTransportation: {
+        initialValue: modes[0].value,
+      },
+      description: {},
+    })
+  )
 )

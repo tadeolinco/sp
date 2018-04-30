@@ -31,7 +31,8 @@ class App extends Component {
 
   render() {
     const { platform } = this.props
-    return platform.isMobile ? <MobileApp /> : <DesktopApp />
+    return <MobileApp />
+    // return platform.isMobile ? <MobileApp /> : <DesktopApp />
   }
 }
 

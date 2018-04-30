@@ -21,12 +21,44 @@ import originLogo from './assets/origin.svg'
 import qs from 'qs'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
+import { withSession } from '../../providers/SessionProvider'
+
+const randomColor = () => {
+  const colors = [
+    '0',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    'a',
+    'b',
+    'c',
+    'd',
+    'e',
+    'f',
+  ]
+  let color = ''
+  while (color.length < 6) {
+    color += colors[Math.floor(Math.random() * colors.length)]
+  }
+  return '#' + color
+}
 
 class MapPanel extends Component {
   initialState = {
+    settingOrigin: false,
+    visibleSearchPanel: true,
     routes: [],
     visibleSetPanel: false,
     addingRoute: null,
+    path: [],
+    gettingPath: false,
+    visiblePath: false,
     newPath: [],
     tentativePath: [],
     undos: [],
@@ -52,6 +84,22 @@ class MapPanel extends Component {
   }
   state = { ...this.initialState }
 
+  toggleSearchPanel = visibleSearchPanel => {
+    this.setState(
+      {
+        visibleSearchPanel:
+          typeof visibleSearchPanel === 'boolean'
+            ? visibleSearchPanel
+            : !this.state.visibleSearchPanel,
+      },
+      () => {
+        if (this.state.visibleSearchPanel) {
+          this.props.changeMapMode(MAP_MODE.VIEW)
+        }
+      }
+    )
+  }
+
   async componentDidMount() {
     try {
       const {
@@ -67,6 +115,7 @@ class MapPanel extends Component {
 
   componentDidUpdate(prevProps, prevState) {
     if (prevProps.mapMode !== this.props.mapMode) {
+      this.props.notifications.clear()
       this.setState({ ...this.initialState })
       this.componentDidMount()
       if (this.props.mapMode === MAP_MODE.ADD_ROUTE) {
@@ -78,24 +127,26 @@ class MapPanel extends Component {
           },
           addingRoute: ADD_ROUTE.SETTING_ORIGIN,
         })
-        this.props.notifications.clear(() => {
-          this.props.notifications.enqueue(
-            'Set the origin of the route by clicking on the map.',
-            'info',
-            3000
-          )
-          this.props.notifications.enqueue(
-            'You can also drag the blue marker around on the map to set the origin.',
-            'info',
-            3000
-          )
-          this.props.notifications.enqueue(
-            'Click on the "Set Origin" button once you\'re done, or if you want to cancel, just go back.',
-            'info',
-            5000
-          )
-        })
-        this.props.toggleSearchPanel(false)
+        if (!this.props.session.user.hasCreatedRoute) {
+          this.props.notifications.clear(() => {
+            this.props.notifications.enqueue(
+              'Set the origin of the route by clicking on the map.',
+              'info',
+              3000
+            )
+            this.props.notifications.enqueue(
+              'You can also drag the blue marker around on the map to set the origin.',
+              'info',
+              3000
+            )
+            this.props.notifications.enqueue(
+              'Click on the "Set Origin" button once you\'re done, or if you want to cancel, just go back.',
+              'info',
+              5000
+            )
+          })
+        }
+        this.toggleSearchPanel(false)
       }
     }
   }
@@ -117,7 +168,21 @@ class MapPanel extends Component {
       })
     if (mapMode === MAP_MODE.ADD_ROUTE) {
       if (this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN) {
-        this.setState({ origin: { ...this.state.origin, lat, lng } })
+        this.setState({
+          origin: { ...this.state.origin, lat, lng },
+          settingOrigin: true,
+        })
+        const {
+          data: { path },
+        } = await Axios.get(
+          '/api/snapToRoad?' + qs.stringify({ path: [{ lat, lng }] })
+        )
+        this.setState({ settingOrigin: false })
+
+        if (path.length) {
+          const { lat, lng } = path[0]
+          this.setState({ origin: { ...this.state.origin, lat, lng } })
+        }
         this.handleManually('setCenter', { lat, lng })
       } else if (this.state.addingRoute === ADD_ROUTE.ADDING_POINTS) {
         this.setState({
@@ -132,8 +197,9 @@ class MapPanel extends Component {
             '/api/snapToRoad?' +
               qs.stringify({ path: [lastNode, { lat, lng }] })
           )
-          this.setState({ tentativePath: path })
-          this.handleApplyTentativePath()
+          this.setState({ tentativePath: path }, () => {
+            this.handleApplyTentativePath()
+          })
         } catch ({ response }) {
           this.props.notifications.clear(() => {
             this.props.notifications.enqueue(response.data.message, 'error')
@@ -210,9 +276,32 @@ class MapPanel extends Component {
           },
           visibleSetPanel: false,
         },
-        () => {
+        async () => {
           this.handleFitMarkers()
-          this.props.toggleSearchPanel(true)
+          this.toggleSearchPanel(true)
+          if (this.state.origin.place_id && this.state.destination.place_id) {
+            this.setState({ gettingPath: true, visiblePath: true })
+
+            const {
+              data: { path },
+            } = await Axios.get(
+              '/api/path?' +
+                qs.stringify({
+                  origin: {
+                    lat: this.state.origin.lat,
+                    lng: this.state.origin.lng,
+                  },
+                  destination: {
+                    lat: this.state.destination.lat,
+                    lng: this.state.destination.lng,
+                  },
+                })
+            )
+            this.setState({ path, gettingPath: false })
+            if (!path.length) {
+              this.props.notifications.enqueue('No path was found.', 'warning')
+            }
+          }
         }
       )
     } catch ({ response }) {
@@ -363,30 +452,33 @@ class MapPanel extends Component {
       destination: { ...this.state.destination, lat, lng },
       newPath: [{ lat, lng }],
     })
-    notifications.clear(() => {
-      notifications.enqueue(
-        'Click on the map to trace your route. Using smaller gaps between points to help us trace your route better.',
-        'info',
-        5000
-      )
-      notifications.enqueue(
-        'Big gaps or sharp turns tend to make our traces a bit wonky, if that happens you can always undo the last point then try again.',
-        'info',
-        5000
-      )
 
-      notifications.enqueue(
-        'Dragging the marker around the map lets you see what the predicted trace will be. Release to save that trace.',
-        'info',
-        5000
-      )
+    if (!this.props.session.user.hasCreatedRoute) {
+      notifications.clear(() => {
+        notifications.enqueue(
+          'Click on the map to trace your route. Using smaller gaps between points to help us trace your route better.',
+          'info',
+          5000
+        )
+        notifications.enqueue(
+          'Big gaps or sharp turns tend to make our traces a bit wonky, if that happens you can always undo the last point then try again.',
+          'info',
+          5000
+        )
 
-      notifications.enqueue(
-        `Once you're satisfied with your route, click on "Add Route".`,
-        'info',
-        3000
-      )
-    })
+        notifications.enqueue(
+          'Dragging the marker around the map lets you see what the predicted trace will be. Release to save that trace.',
+          'info',
+          5000
+        )
+
+        notifications.enqueue(
+          `Once you're satisfied with your route, click on "Add Route".`,
+          'info',
+          3000
+        )
+      })
+    }
   }
 
   handleApplyTentativePath = () => {
@@ -428,91 +520,114 @@ class MapPanel extends Component {
       gestureHandling: 'greedy',
     }
 
-    const allRoutes = this.state.routes.map(route => (
+    const commutePath = this.state.path.map((path, index) => (
       <Polyline
-        key={route.id}
-        path={route.nodes}
+        key={`${path.id}-${index}`}
+        path={path.nodes}
         options={{
-          strokeColor: '#21ba45',
+          strokeColor: randomColor(),
           strokeWeight: 5,
         }}
         onClick={this.handleMapClick}
       />
     ))
+    // const commutePath = this.state.path.length ? (
+    //   <Polyline
+    //     path={this.state.path}
+    //     options={{ strokeColor: randomColor(), strokeWeight: 5 }}
+    //     onClick={this.handleMapClick}
+    //   />
+    // ) : null
+
+    const allRoutes = this.state.path.length
+      ? null
+      : this.state.routes.map(route => (
+          <Polyline
+            key={route.id}
+            path={route.nodes}
+            options={{
+              // strokeColor: '#21ba45',
+              strokeColor: randomColor(),
+              strokeWeight: 5,
+            }}
+            onClick={this.handleMapClick}
+          />
+        ))
 
     const setOriginButton = (
-      <div
-        style={{
-          position: 'absolute',
-          top: this.props.topHeight,
-          width: '100%',
-        }}
+      <Button
+        loading={this.state.settingOrigin}
+        color="blue"
+        fluid
+        style={{ borderRadius: 0 }}
+        onClick={this.handleSetOrigin}
       >
-        <Button
-          color="blue"
-          fluid
-          style={{ borderRadius: 0 }}
-          onClick={this.handleSetOrigin}
-        >
-          Set Origin
-        </Button>
-      </div>
+        Set Origin
+      </Button>
     )
 
     const backButton = (
-      <div style={{ position: 'absolute', bottom: 0, width: '100%' }}>
-        <Button
-          color="red"
-          fluid
-          style={{ borderRadius: 0 }}
-          onClick={() => this.props.changeMapMode(MAP_MODE.VIEW)}
-        >
-          <Icon name="undo" />
-          Back
-        </Button>
-      </div>
+      <Button
+        color="red"
+        fluid
+        style={{ borderRadius: 0 }}
+        onClick={() => this.props.changeMapMode(MAP_MODE.VIEW)}
+      >
+        <Icon name="undo" />
+        Back
+      </Button>
     )
 
+    const resetButton = this.state.visiblePath ? (
+      <Button
+        loading={this.state.gettingPath}
+        color="red"
+        fluid
+        style={{ borderRadius: 0 }}
+        onClick={() => {
+          this.setState({
+            path: [],
+            visiblePath: false,
+            origin: { ...this.initialState.origin },
+            destination: { ...this.initialState.destination },
+          })
+        }}
+      >
+        <Icon name="undo" />
+        Back
+      </Button>
+    ) : null
+
     const undoButton = (
-      <div style={{ position: 'absolute', bottom: 0, width: '100%' }}>
-        <Button
-          loading={this.state.loadingPath}
-          color="red"
-          fluid
-          style={{ borderRadius: 0 }}
-          onClick={this.handleUndo}
-        >
-          <Icon name="undo" />
-          Undo
-        </Button>
-      </div>
+      <Button
+        loading={this.state.loadingPath}
+        color="red"
+        fluid
+        style={{ borderRadius: 0 }}
+        onClick={this.handleUndo}
+      >
+        <Icon name="undo" />
+        Undo
+      </Button>
     )
 
     const doneButton = (
-      <div
-        style={{
-          position: 'absolute',
-          top: this.props.topHeight,
-          width: '100%',
-        }}
-      >
-        <RouteFormModal
-          mapPanel={this}
-          trigger={
-            <Button
-              color="blue"
-              fluid
-              style={{ borderRadius: 0 }}
-              onClick={() => {
-                this.props.notifications.clear(() => {})
-              }}
-            >
-              <Icon name="check" />
-              Done
-            </Button>
-          }
-        />
-      </div>
+      <RouteFormModal
+        mapPanel={this}
+        trigger={
+          <Button
+            color="blue"
+            fluid
+            style={{ borderRadius: 0 }}
+            onClick={() => {
+              this.props.notifications.clear(() => {})
+            }}
+          >
+            <Icon name="check" />
+            Done
+          </Button>
+        }
+      />
     )
 
     const originMarker = this.state.origin.place_id ? (
@@ -587,20 +702,33 @@ class MapPanel extends Component {
 
     return (
       <Fragment>
-        {this.props.visibleSearchPanel && (
-          <SearchPanel
-            handleSearchPanelChange={this.handleSearchPanelChange}
-            handleSearch={this.handleSearch}
-            origin={this.state.origin}
-            destination={this.state.destination}
-          />
-        )}
-        {this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN && setOriginButton}
-        {this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN && backButton}
-        {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS && undoButton}
-        {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS &&
-          this.state.newPath.length > 1 &&
-          doneButton}
+        <div
+          style={{
+            position: 'absolute',
+            width: '100%',
+            top: this.props.topHeight,
+          }}
+        >
+          {this.state.visibleSearchPanel && (
+            <SearchPanel
+              handleSearchPanelChange={this.handleSearchPanelChange}
+              handleSearch={this.handleSearch}
+              origin={this.state.origin}
+              destination={this.state.destination}
+            />
+          )}
+          {this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN &&
+            setOriginButton}
+          {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS &&
+            this.state.newPath.length > 1 &&
+            doneButton}
+        </div>
+
+        <div style={{ position: 'absolute', width: '100%', bottom: 0 }}>
+          {this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN && backButton}
+          {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS && undoButton}
+          {resetButton}
+        </div>
         <GoogleMap
           ref={mapRef => (this.mapRef = mapRef)}
           clickableIcons={false}
@@ -623,6 +751,21 @@ class MapPanel extends Component {
               {originMarker}
               {destinationMarker}
               {allRoutes}
+              {this.state.routes.map(route => {
+                return (
+                  <Fragment key={route.id}>
+                    {route.nodes.map(node => {
+                      return (
+                        <Marker
+                          key={node.id}
+                          position={{ lat: node.lat, lng: node.lng }}
+                        />
+                      )
+                    })}
+                  </Fragment>
+                )
+              })}
+              {commutePath}
             </Fragment>
           )}
           {this.props.mapMode === MAP_MODE.ADD_ROUTE && (
@@ -644,16 +787,20 @@ class MapPanel extends Component {
 }
 
 export default withPlatform(
-  withNotifications(
-    compose(
-      withProps({
-        googleMapURL:
-          'https://maps.googleapis.com/maps/api/js?key=AIzaSyCsmniogYj-rg23fhKjRH21QkUz3VoyP-o&v=3.exp&libraries=geometry,drawing,places',
-        loadingElement: <div id="loadingelement" style={{ height: `100%` }} />,
-        mapElement: <div id="mapelement" style={{ height: `100%` }} />,
-      }),
-      withScriptjs,
-      withGoogleMap
-    )(MapPanel)
+  withSession(
+    withNotifications(
+      compose(
+        withProps({
+          googleMapURL:
+            'https://maps.googleapis.com/maps/api/js?key=AIzaSyCsmniogYj-rg23fhKjRH21QkUz3VoyP-o&v=3.exp&libraries=geometry,drawing,places',
+          loadingElement: (
+            <div id="loadingelement" style={{ height: `100%` }} />
+          ),
+          mapElement: <div id="mapelement" style={{ height: `100%` }} />,
+        }),
+        withScriptjs,
+        withGoogleMap
+      )(MapPanel)
+    )
   )
 )
