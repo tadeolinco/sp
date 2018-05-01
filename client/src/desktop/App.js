@@ -1,5 +1,4 @@
 import React, { Component } from 'react'
-
 import LoginModal from '../components/LoginModal'
 
 class App extends Component {

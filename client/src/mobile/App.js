@@ -1,9 +1,8 @@
 import React, { Component, Fragment } from 'react'
-
 import MapPanel from '../components/MapPanel/MapPanel'
-import Nav from './Nav'
-import { withSession } from '../providers/SessionProvider'
 import { MAP_MODE } from '../constants'
+import { withSession } from '../providers/SessionProvider'
+import Nav from './Nav'
 
 class App extends Component {
   state = {

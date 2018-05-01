@@ -1,6 +1,5 @@
-import lineIntersect from '@turf/line-intersect'
-import lineOverlap from '@turf/line-overlap'
 import { lineString } from '@turf/helpers'
+import lineIntersect from '@turf/line-intersect'
 
 export const intersection = (startA, endA, startB, endB) => {
   const line1 = lineString([[startA.lat, startA.lng], [endA.lat, endA.lng]])

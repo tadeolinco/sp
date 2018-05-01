@@ -1,11 +1,10 @@
-import { intersection, overlaps } from './util/turf'
-
-import Route from './entity/route/entity'
-import { getRepository, getConnection, getTreeRepository } from 'typeorm'
-import timeMe from './util/timeMe'
+import { getConnection, getRepository } from 'typeorm'
 import Node from './entity/node/entity'
-import { notDeepStrictEqual } from 'assert'
+import Route from './entity/route/entity'
 import User from './entity/user/entity'
+import timeMe from './util/timeMe'
+import { intersection } from './util/turf'
+
 ;(async () => {
   const user = await getRepository(User).save({
     username: 'tadeolinco',

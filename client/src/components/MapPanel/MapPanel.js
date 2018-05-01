@@ -1,5 +1,6 @@
-import { ADD_ROUTE, DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
-import { Button, Icon } from 'semantic-ui-react'
+import Axios from 'axios'
+import qs from 'qs'
+import React, { Component, Fragment } from 'react'
 import {
   GoogleMap,
   Marker,
@@ -7,21 +8,19 @@ import {
   withGoogleMap,
   withScriptjs,
 } from 'react-google-maps'
-import React, { Component, Fragment } from 'react'
 import { compose, withProps } from 'recompose'
-
-import Axios from 'axios'
-import RouteFormModal from './RouteFormModal'
-import SearchPanel from './SearchPanel'
-import SetPanel from './SetPanel'
-import debounce from '../../util/debounce'
-import destinationLogo from './assets/destination.svg'
-import mapStyles from './style.json'
-import originLogo from './assets/origin.svg'
-import qs from 'qs'
+import { Button, Icon } from 'semantic-ui-react'
+import { ADD_ROUTE, DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
 import { withSession } from '../../providers/SessionProvider'
+import debounce from '../../util/debounce'
+import RouteFormModal from './RouteFormModal'
+import SearchPanel from './SearchPanel'
+import SetPanel from './SetPanel'
+import destinationLogo from './assets/destination.svg'
+import originLogo from './assets/origin.svg'
+import mapStyles from './style.json'
 
 const randomColor = () => {
   const colors = [
@@ -531,13 +530,6 @@ class MapPanel extends Component {
         onClick={this.handleMapClick}
       />
     ))
-    // const commutePath = this.state.path.length ? (
-    //   <Polyline
-    //     path={this.state.path}
-    //     options={{ strokeColor: randomColor(), strokeWeight: 5 }}
-    //     onClick={this.handleMapClick}
-    //   />
-    // ) : null
 
     const allRoutes = this.state.path.length
       ? null
@@ -751,20 +743,6 @@ class MapPanel extends Component {
               {originMarker}
               {destinationMarker}
               {allRoutes}
-              {this.state.routes.map(route => {
-                return (
-                  <Fragment key={route.id}>
-                    {route.nodes.map(node => {
-                      return (
-                        <Marker
-                          key={node.id}
-                          position={{ lat: node.lat, lng: node.lng }}
-                        />
-                      )
-                    })}
-                  </Fragment>
-                )
-              })}
               {commutePath}
             </Fragment>
           )}

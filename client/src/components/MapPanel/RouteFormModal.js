@@ -1,11 +1,10 @@
-import { Button, Form, Message, Modal } from 'semantic-ui-react'
-import React, { Component } from 'react'
-
 import Axios from 'axios'
-import withForm from '../../util/withForm'
+import React, { Component } from 'react'
+import { Button, Form, Message, Modal } from 'semantic-ui-react'
+import { MAP_MODE } from '../../constants'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withSession } from '../../providers/SessionProvider'
-import { MAP_MODE } from '../../constants'
+import withForm from '../../util/withForm'
 
 const modes = ['Jeepney', 'Bus', 'Train', 'Shuttle Service', 'UV Express'].map(
   mode => ({ text: mode, value: mode })

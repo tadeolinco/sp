@@ -1,14 +1,12 @@
-import 'reflect-metadata'
-
 import * as bodyParser from 'body-parser'
-import * as dbConfig from '../ormconfig.json'
 import * as express from 'express'
-import * as logger from 'morgan'
-import * as session from 'express-session'
 import * as store from 'express-mysql-session'
+import * as session from 'express-session'
+import * as logger from 'morgan'
 import * as path from 'path'
-
+import 'reflect-metadata'
 import { createConnection } from 'typeorm'
+import * as dbConfig from '../ormconfig.json'
 import router from './router'
 
 createConnection()

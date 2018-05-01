@@ -1,11 +1,9 @@
+import Axios from 'axios'
 import React, { Component } from 'react'
-
-import DesktopApp from './desktop/App'
 import MobileApp from './mobile/App'
+import { withNotifications } from './providers/NotificationsProvider'
 import { withPlatform } from './providers/PlatformProvider'
 import { withSession } from './providers/SessionProvider'
-import { withNotifications } from './providers/NotificationsProvider'
-import Axios from 'axios'
 
 class App extends Component {
   state = { loading: true }

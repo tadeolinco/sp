@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Transition, Message } from 'semantic-ui-react'
+import { Message, Transition } from 'semantic-ui-react'
 
 const ANIMATION_DURATION = 1000
 

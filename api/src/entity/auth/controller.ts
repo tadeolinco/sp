@@ -1,6 +1,5 @@
-import { getRepository } from 'typeorm'
 import * as bcrypt from 'bcrypt'
-
+import { getRepository } from 'typeorm'
 import User from '../user/entity'
 import { isLoggedIn } from './middlware'
 

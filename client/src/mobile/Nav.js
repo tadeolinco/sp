@@ -1,12 +1,11 @@
-import { Dropdown, Icon, Menu } from 'semantic-ui-react'
-import React, { Component } from 'react'
-
 import Axios from 'axios'
+import React, { Component } from 'react'
+import { Dropdown, Icon, Menu } from 'semantic-ui-react'
 import LoginModal from '../components/LoginModal'
 import SignupModal from '../components/SignupModal'
+import { MAP_MODE } from '../constants'
 import { withNotifications } from '../providers/NotificationsProvider'
 import { withSession } from '../providers/SessionProvider'
-import { MAP_MODE } from '../constants'
 
 class Nav extends Component {
   logout = async () => {

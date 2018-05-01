@@ -1,12 +1,11 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
-  ManyToMany,
+  Entity,
   JoinTable,
+  ManyToMany,
   OneToMany,
+  PrimaryGeneratedColumn,
 } from 'typeorm'
-import Node from '../node/entity'
 import Route from '../route/entity'
 
 @Entity()

@@ -1,6 +1,6 @@
-import { Button } from 'semantic-ui-react'
-import { InfoWindow } from 'react-google-maps'
 import React from 'react'
+import { InfoWindow } from 'react-google-maps'
+import { Button } from 'semantic-ui-react'
 
 const SetPanel = ({
   position,

@@ -1,14 +1,11 @@
 import { getConnection, getRepository } from 'typeorm'
-
-import Node from '../node/entity'
-import Route from './entity'
-import User from '../user/entity'
-import computeDistance from '../../util/computeDistance'
-import fillPath from '../../util/fillPath'
+import { snapToRoads } from '../../googleMaps'
 import getPath from '../../util/getPath'
 import { intersection } from '../../util/turf'
 import { isLoggedIn } from '../auth/middlware'
-import { snapToRoads } from '../../googleMaps'
+import Node from '../node/entity'
+import User from '../user/entity'
+import Route from './entity'
 
 const controller = {
   snapToRoad: {
@@ -237,6 +234,7 @@ const controller = {
                 )
 
                 if (intersectingNode) {
+                  console.log('found an intersecting node')
                   const responses = await Promise.all([
                     nodeRepository.save({
                       ...intersectingNode,

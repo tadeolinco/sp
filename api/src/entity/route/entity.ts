@@ -1,15 +1,14 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
+  Entity,
+  JoinTable,
   ManyToMany,
   ManyToOne,
-  JoinTable,
   OneToMany,
+  PrimaryGeneratedColumn,
 } from 'typeorm'
 import Node from '../node/entity'
 import User from '../user/entity'
-import { DESTRUCTION } from 'dns'
 
 @Entity()
 class Route {

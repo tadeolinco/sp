@@ -1,10 +1,9 @@
-import { Button, Form, FormInput, Message, Modal } from 'semantic-ui-react'
-import React, { Component } from 'react'
-
 import Axios from 'axios'
-import withForm from '../util/withForm'
+import React, { Component } from 'react'
+import { Button, Form, FormInput, Message, Modal } from 'semantic-ui-react'
 import { withNotifications } from '../providers/NotificationsProvider'
 import { withSession } from '../providers/SessionProvider'
+import withForm from '../util/withForm'
 
 class LoginModal extends Component {
   state = { loading: false }

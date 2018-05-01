@@ -1,4 +1,4 @@
-import { placesAutocomplete, getPlace, getPlaceById } from '../../googleMaps'
+import { getPlace, getPlaceById, placesAutocomplete } from '../../googleMaps'
 
 const controller = {
   getPlaces: {
