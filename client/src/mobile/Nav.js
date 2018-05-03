@@ -26,7 +26,7 @@ class Nav extends Component {
   render() {
     const { session } = this.props
 
-    const title = 'Commute Community'
+    const title = 'PADAAN'
 
     const withSessionMenu = (
       <Dropdown.Menu>
