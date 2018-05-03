@@ -7,7 +7,7 @@ import truckIcon from './assets/truck.svg'
 import trainIcon from './assets/train.svg'
 import taxiIcon from './assets/taxi.svg'
 
-const VehicleMarker = ({ path }) => {
+const VehicleMarker = ({ path, handleClick }) => {
   const { mode } = path
   let icon = ''
   if (mode === 'Jeepney') icon = jeepIcon
@@ -22,6 +22,7 @@ const VehicleMarker = ({ path }) => {
         lat: path.nodes[0].lat,
         lng: path.nodes[0].lng,
       }}
+      onClick={handleClick}
       icon={icon}
     />
   )

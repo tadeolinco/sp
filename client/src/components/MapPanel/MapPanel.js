@@ -5,6 +5,7 @@ import {
   GoogleMap,
   Marker,
   Polyline,
+  InfoWindow,
   withGoogleMap,
   withScriptjs,
 } from 'react-google-maps'
@@ -39,6 +40,7 @@ const assortedColors = [
 
 class MapPanel extends Component {
   initialState = {
+    selectedRoute: null,
     settingOrigin: false,
     visibleSearchPanel: true,
     routes: [],
@@ -181,6 +183,9 @@ class MapPanel extends Component {
     const { mapMode } = this.props
     const lat = e.latLng.lat()
     const lng = e.latLng.lng()
+    if (this.state.selectedRoute) {
+      this.setState({ selectedRoute: null })
+    }
     if (mapMode === MAP_MODE.VIEW)
       this.setState({
         visibleSetPanel: true,
@@ -574,6 +579,7 @@ class MapPanel extends Component {
   }
 
   render() {
+    console.log(this.state)
     const options = {
       styles: mapStyles,
       disableDefaultUI: true,
@@ -590,7 +596,12 @@ class MapPanel extends Component {
           }}
           onClick={this.handleMapClick}
         />
-        <VehicleMarker path={path} />
+        <VehicleMarker
+          path={path}
+          handleClick={() => {
+            this.setState({ selectedRoute: { ...path } })
+          }}
+        />
       </Fragment>
     ))
 
@@ -830,6 +841,19 @@ class MapPanel extends Component {
               ))}
             </Fragment>
           ))} */}
+          {this.state.selectedRoute && (
+            <InfoWindow
+              position={{
+                lat: this.state.selectedRoute.nodes[0].lat,
+                lng: this.state.selectedRoute.nodes[0].lng,
+              }}
+              onCloseClick={() => {
+                this.setState({ selectedRoute: null })
+              }}
+            >
+              <h1>hello</h1>
+            </InfoWindow>
+          )}
         </GoogleMap>
       </Fragment>
     )
