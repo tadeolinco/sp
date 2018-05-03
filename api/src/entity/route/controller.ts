@@ -16,7 +16,7 @@ const controller = {
       try {
         const path = await snapToRoads(req.query.path)
         if (!path) {
-          res
+          return res
             .status(400)
             .json({ message: 'Cannot trace route from these points.' })
         }

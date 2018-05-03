@@ -27,6 +27,11 @@ const constructPath = (cameFrom, current) => {
       route.nodes = [{ lat: node.lat, lng: node.lng, id: node.id }]
     }
   })
+
+  routes = routes.filter(route => route.nodes.length > 1)
+  // for (const route of routes) {
+  //   console.log(`Route[${route.id}] = ${route.nodes.length}`)
+  // }
   return routes
 }
 

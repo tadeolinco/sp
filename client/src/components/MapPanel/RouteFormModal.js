@@ -28,7 +28,19 @@ class RouteFormModal extends Component {
         mode: form.values.modeOfTransportation,
         description: form.values.description,
       })
-      session.changeUser({ ...session.user, hasCreatedRoute: true })
+
+      const upperBound = { lat: -Infinity, lng: -Infinity }
+      const lowerBound = { lat: Infinity, lng: Infinity }
+      for (const node of route.nodes) {
+        if (node.lat < lowerBound.lat) lowerBound.lat = node.lat
+        if (node.lng < lowerBound.lng) lowerBound.lng = node.lng
+        if (node.lat > upperBound.lat) upperBound.lat = node.lat
+        if (node.lng > upperBound.lng) upperBound.lng = node.lng
+      }
+
+      if (!session.user.hasCreatedRoute) {
+        session.changeUser({ ...session.user, hasCreatedRoute: true })
+      }
       notifications.clear(() => {
         notifications.enqueue('Successfully added route!', 'success')
       })
@@ -38,6 +50,10 @@ class RouteFormModal extends Component {
         },
         () => {
           mapPanel.props.changeMapMode(MAP_MODE.VIEW)
+          mapPanel.handleFitMarkers({
+            origin: upperBound,
+            destination: lowerBound,
+          })
         }
       )
     } catch (err) {

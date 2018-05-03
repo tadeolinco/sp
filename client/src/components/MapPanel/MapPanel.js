@@ -192,18 +192,24 @@ class MapPanel extends Component {
           origin: { ...this.state.origin, lat, lng },
           settingOrigin: true,
         })
-        const {
-          data: { path },
-        } = await Axios.get(
-          '/api/snapToRoad?' + qs.stringify({ path: [{ lat, lng }] })
-        )
-        this.setState({ settingOrigin: false })
+        try {
+          const {
+            data: { path },
+          } = await Axios.get(
+            '/api/snapToRoad?' + qs.stringify({ path: [{ lat, lng }] })
+          )
+          this.setState({ settingOrigin: false })
 
-        if (path.length) {
-          const { lat, lng } = path[0]
-          this.setState({ origin: { ...this.state.origin, lat, lng } })
+          if (path.length) {
+            const { lat, lng } = path[0]
+            this.setState({ origin: { ...this.state.origin, lat, lng } })
+          }
+          this.handleManually('setCenter', { lat, lng })
+        } catch ({ response }) {
+          this.props.notifications.clear(() => {
+            this.props.notifications.enqueue(response.data.message, 'error')
+          })
         }
-        this.handleManually('setCenter', { lat, lng })
       } else if (this.state.addingRoute === ADD_ROUTE.ADDING_POINTS) {
         this.setState({
           destination: { ...this.state.destination, lat, lng },
@@ -444,18 +450,24 @@ class MapPanel extends Component {
     const lng = e.latLng.lng()
     this.setState({ destination: { ...this.state.destination, lat, lng } })
     debounce(DEBOUNCE_ACTIONS.GET_PATH, 200, async () => {
-      const lastNode = this.state.newPath[this.state.newPath.length - 1]
-      this.setState({ loadingPath: true })
-      const {
-        data: { path },
-      } = await Axios.get(
-        '/api/snapToRoad?' + qs.stringify({ path: [lastNode, { lat, lng }] })
-      )
+      try {
+        const lastNode = this.state.newPath[this.state.newPath.length - 1]
+        this.setState({ loadingPath: true })
+        const {
+          data: { path },
+        } = await Axios.get(
+          '/api/snapToRoad?' + qs.stringify({ path: [lastNode, { lat, lng }] })
+        )
 
-      if (!this.state.destinationDropped) {
-        this.setState({ tentativePath: path })
+        if (!this.state.destinationDropped) {
+          this.setState({ tentativePath: path })
+        }
+        this.setState({ loadingPath: false })
+      } catch ({ response }) {
+        this.props.notifications.clear(() => {
+          this.props.notifications.enqueue(response.data.message, 'error')
+        })
       }
-      this.setState({ loadingPath: false })
     })
   }
 
