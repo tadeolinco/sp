@@ -3,6 +3,7 @@ import MapPanel from '../components/MapPanel/MapPanel'
 import { MAP_MODE } from '../constants'
 import { withSession } from '../providers/SessionProvider'
 import Nav from './Nav'
+import { withMapSize } from '../providers/MapSizeProvider'
 
 class App extends Component {
   state = {
@@ -29,8 +30,9 @@ class App extends Component {
             containerElement={
               <div
                 style={{
-                  paddingTop: this.state.visible ? 76 : 0,
-                  height: `calc(100vh - ${this.divElement.clientHeight}px)`,
+                  paddingTop: this.props.mapSize.paddingTop,
+                  height: `calc(100vh - ${this.divElement.clientHeight +
+                    this.props.mapSize.paddingBottom}px)`,
                 }}
               />
             }
@@ -41,4 +43,4 @@ class App extends Component {
   }
 }
 
-export default withSession(App)
+export default withSession(withMapSize(App))

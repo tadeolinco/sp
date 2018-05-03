@@ -22,6 +22,7 @@ import destinationLogo from './assets/destination.svg'
 import originLogo from './assets/origin.svg'
 import mapStyles from './style.json'
 import VehicleMarker from './VehicleMarker'
+import { withMapSize } from '../../providers/MapSizeProvider'
 
 const assortedColors = [
   '#db2828',
@@ -72,22 +73,16 @@ class MapPanel extends Component {
   state = { ...this.initialState }
 
   toggleSearchPanel = visibleSearchPanel => {
-    this.setState(
-      {
-        visibleSearchPanel:
-          typeof visibleSearchPanel === 'boolean'
-            ? visibleSearchPanel
-            : !this.state.visibleSearchPanel,
-      },
-      () => {
-        if (this.state.visibleSearchPanel) {
-          this.props.changeMapMode(MAP_MODE.VIEW)
-        }
-      }
-    )
+    this.setState({
+      visibleSearchPanel:
+        typeof visibleSearchPanel === 'boolean'
+          ? visibleSearchPanel
+          : !this.state.visibleSearchPanel,
+    })
   }
 
   async componentDidMount() {
+    this.props.mapSize.updatePaddingTop(76)
     try {
       const {
         data: { routes },
@@ -101,7 +96,47 @@ class MapPanel extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
+    if (prevState.visiblePath !== this.state.visiblePath) {
+      if (this.state.visiblePath) this.props.mapSize.updatePaddingBottom(36)
+      else this.props.mapSize.updatePaddingBottom(0)
+    }
+
+    if (prevState.visibleSearchPanel !== this.state.visibleSearchPanel) {
+      if (this.state.visibleSearchPanel) {
+        this.props.mapSize.updatePaddingTop(76)
+        this.props.changeMapMode(MAP_MODE.VIEW)
+      } else {
+        this.props.mapSize.updatePaddingTop(0)
+      }
+    }
+
+    if (prevState.addingRoute !== this.state.addingRoute) {
+      if (!this.state.addingRoute) {
+        this.props.mapSize.updatePaddingBottom(0)
+        this.props.mapSize.updatePaddingTop(76)
+      } else {
+        this.props.mapSize.updatePaddingBottom(36)
+        if (this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN) {
+          this.props.mapSize.updatePaddingTop(36)
+        } else {
+          this.props.mapSize.updatePaddingTop(0)
+        }
+      }
+    }
+
+    if (this.state.addingRoute === ADD_ROUTE.ADDING_POINTS) {
+      if (prevState.newPath.length === 1 && this.state.newPath.length > 1) {
+        this.props.mapSize.updatePaddingTop(36)
+      } else if (
+        prevState.newPath.length > 1 &&
+        this.state.newPath.length === 1
+      ) {
+        this.props.mapSize.updatePaddingTop(0)
+      }
+    }
+
     if (prevProps.mapMode !== this.props.mapMode) {
+      this.props.mapSize.updatePaddingBottom(0)
       this.setState({ ...this.initialState, routes: this.state.routes })
       if (this.props.mapMode === MAP_MODE.ADD_ROUTE) {
         this.setState({
@@ -200,31 +235,84 @@ class MapPanel extends Component {
     this.setState({ visibleSetPanel: false })
   }
 
-  handleFitMarkers = () => {
+  handleFitMarkers = ({ origin, destination }) => {
     const { LatLng, LatLngBounds } = window.google.maps
 
-    const originLocation = new LatLng(
-      this.state.origin.lat,
-      this.state.origin.lng
-    )
-    const destinationLocation = new LatLng(
-      this.state.destination.lat,
-      this.state.destination.lng
-    )
-    if (this.state.origin.place_id && this.state.destination.place_id) {
+    if (origin && destination) {
       const bounds = new LatLngBounds()
-
-      if (this.state.origin.place_id) {
-        bounds.extend(originLocation)
-      }
-      if (this.state.destination.place_id) {
-        bounds.extend(destinationLocation)
-      }
+      bounds.extend(new LatLng(origin.lat, origin.lng))
+      bounds.extend(new LatLng(destination.lat, destination.lng))
       this.mapRef.fitBounds(bounds)
-    } else if (this.state.origin.place_id) {
-      this.mapRef.panTo(originLocation)
-    } else if (this.state.destination.place_id) {
-      this.mapRef.panTo(destinationLocation)
+    } else if (origin) {
+      this.mapRef.panTo(new LatLng(origin.lat, origin.lng))
+    } else if (destination) {
+      this.mapRef.panTo(new LatLng(destination.lat, destination.lng))
+    }
+  }
+
+  handleSetPath = async () => {
+    const { origin, destination } = this.state
+    this.toggleSearchPanel(true)
+    if (origin.place_id && destination.place_id) {
+      this.setState({ gettingPath: true, visiblePath: true })
+
+      const {
+        data: { path },
+      } = await Axios.get(
+        '/api/path?' +
+          qs.stringify({
+            origin: {
+              lat: origin.lat,
+              lng: origin.lng,
+            },
+            destination: {
+              lat: destination.lat,
+              lng: destination.lng,
+            },
+          })
+      )
+
+      let upperBound = { lat: -Infinity, lng: -Infinity }
+      let lowerBound = { lat: Infinity, lng: Infinity }
+
+      for (const route of path) {
+        for (const node of route.nodes) {
+          if (node.lat < lowerBound.lat) lowerBound.lat = node.lat
+          if (node.lng < lowerBound.lng) lowerBound.lng = node.lng
+          if (node.lat > upperBound.lat) upperBound.lat = node.lat
+          if (node.lng > upperBound.lng) upperBound.lng = node.lng
+        }
+      }
+      if (origin.lat < lowerBound.lat) lowerBound.lat = origin.lat
+      if (origin.lng < lowerBound.lng) lowerBound.lng = origin.lng
+      if (origin.lat > upperBound.lat) upperBound.lat = origin.lat
+      if (origin.lng > upperBound.lng) upperBound.lng = origin.lng
+
+      if (destination.lat < lowerBound.lat) lowerBound.lat = destination.lat
+      if (destination.lng < lowerBound.lng) lowerBound.lng = destination.lng
+      if (destination.lat > upperBound.lat) upperBound.lat = destination.lat
+      if (destination.lng > upperBound.lng) upperBound.lng = destination.lng
+
+      this.setState(
+        {
+          path,
+          gettingPath: false,
+        },
+        () => {
+          if (!path.length) {
+            this.props.notifications.enqueue('No path was found.', 'warning')
+          } else {
+            this.handleFitMarkers({
+              origin: upperBound,
+              destination: lowerBound,
+            })
+          }
+        }
+      )
+    } else if (origin.place_id) {
+      this.handleFitMarkers({ origin })
+    } else if (destination.place_id) {
+      this.handleFitMarkers({ destination })
     }
   }
 
@@ -261,33 +349,7 @@ class MapPanel extends Component {
           },
           visibleSetPanel: false,
         },
-        async () => {
-          this.handleFitMarkers()
-          this.toggleSearchPanel(true)
-          if (this.state.origin.place_id && this.state.destination.place_id) {
-            this.setState({ gettingPath: true, visiblePath: true })
-
-            const {
-              data: { path },
-            } = await Axios.get(
-              '/api/path?' +
-                qs.stringify({
-                  origin: {
-                    lat: this.state.origin.lat,
-                    lng: this.state.origin.lng,
-                  },
-                  destination: {
-                    lat: this.state.destination.lat,
-                    lng: this.state.destination.lng,
-                  },
-                })
-            )
-            this.setState({ path, gettingPath: false })
-            if (!path.length) {
-              this.props.notifications.enqueue('No path was found.', 'warning')
-            }
-          }
-        }
+        this.handleSetPath
       )
     } catch ({ response }) {
       this.props.notifications.clear(() => {
@@ -309,9 +371,10 @@ class MapPanel extends Component {
         [place]: {
           ...this.state[place],
           loadingOptions: true,
+          options: [],
         },
       })
-      debounce(DEBOUNCE_ACTIONS.GET_PLACES, 1000, async () => {
+      debounce(DEBOUNCE_ACTIONS.GET_PLACES, 500, async () => {
         try {
           const { data } = await Axios.get(
             '/api/places?' + qs.stringify({ input: value })
@@ -360,7 +423,7 @@ class MapPanel extends Component {
             lng: data.location.lng,
           },
         },
-        this.handleFitMarkers
+        this.handleSetPath
       )
     } catch ({ response }) {
       this.props.notifications.clear(() => {
@@ -506,9 +569,8 @@ class MapPanel extends Component {
     }
 
     const commutePath = this.state.path.map((path, index) => (
-      <Fragment>
+      <Fragment key={`${path.id}-${index}`}>
         <Polyline
-          key={`${path.id}-${index}`}
           path={path.nodes}
           options={{
             strokeColor: assortedColors[index % assortedColors.length],
@@ -516,26 +578,26 @@ class MapPanel extends Component {
           }}
           onClick={this.handleMapClick}
         />
-        <VehicleMarker key={path.id} path={path} />
+        <VehicleMarker path={path} />
       </Fragment>
     ))
 
-    const allRoutes = this.state.path.length
-      ? null
-      : this.state.routes.map(route => (
-          <Polyline
-            key={route.id}
-            path={route.nodes}
-            options={{
-              // strokeColor: '#21ba45',
-              strokeColor: '#1b1c1d',
-              strokeWeight: 5,
-            }}
-            onClick={this.handleMapClick}
-          />
-        ))
+    const allRoutes =
+      !this.state.path.length &&
+      this.state.routes.map(route => (
+        <Polyline
+          key={route.id}
+          path={route.nodes}
+          options={{
+            strokeColor: '#1b1c1d', // semantic black
+            strokeWeight: 5,
+          }}
+          onClick={this.handleMapClick}
+        />
+      ))
 
-    const setOriginButton = (
+    const setOriginButton = this.state.addingRoute ===
+      ADD_ROUTE.SETTING_ORIGIN && (
       <Button
         loading={this.state.settingOrigin}
         color="blue"
@@ -547,7 +609,7 @@ class MapPanel extends Component {
       </Button>
     )
 
-    const backButton = (
+    const backButton = this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN && (
       <Button
         color="red"
         fluid
@@ -559,7 +621,7 @@ class MapPanel extends Component {
       </Button>
     )
 
-    const resetButton = this.state.visiblePath ? (
+    const resetButton = this.state.visiblePath && (
       <Button
         loading={this.state.gettingPath}
         color="red"
@@ -577,9 +639,9 @@ class MapPanel extends Component {
         <Icon name="undo" />
         Back
       </Button>
-    ) : null
+    )
 
-    const undoButton = (
+    const undoButton = this.state.addingRoute === ADD_ROUTE.ADDING_POINTS && (
       <Button
         loading={this.state.loadingPath}
         color="red"
@@ -592,24 +654,25 @@ class MapPanel extends Component {
       </Button>
     )
 
-    const doneButton = (
-      <RouteFormModal
-        mapPanel={this}
-        trigger={
-          <Button
-            color="blue"
-            fluid
-            style={{ borderRadius: 0 }}
-            onClick={() => {
-              this.props.notifications.clear(() => {})
-            }}
-          >
-            <Icon name="check" />
-            Done
-          </Button>
-        }
-      />
-    )
+    const doneButton = this.state.addingRoute === ADD_ROUTE.ADDING_POINTS &&
+      this.state.newPath.length > 1 && (
+        <RouteFormModal
+          mapPanel={this}
+          trigger={
+            <Button
+              color="blue"
+              fluid
+              style={{ borderRadius: 0 }}
+              onClick={() => {
+                this.props.notifications.clear(() => {})
+              }}
+            >
+              <Icon name="check" />
+              Done
+            </Button>
+          }
+        />
+      )
 
     const originMarker = this.state.origin.place_id ? (
       <Marker
@@ -698,16 +761,13 @@ class MapPanel extends Component {
               destination={this.state.destination}
             />
           )}
-          {this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN &&
-            setOriginButton}
-          {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS &&
-            this.state.newPath.length > 1 &&
-            doneButton}
+          {setOriginButton}
+          {doneButton}
         </div>
 
         <div style={{ position: 'absolute', width: '100%', bottom: 0 }}>
-          {this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN && backButton}
-          {this.state.addingRoute === ADD_ROUTE.ADDING_POINTS && undoButton}
+          {backButton}
+          {undoButton}
           {resetButton}
         </div>
         <GoogleMap
@@ -765,19 +825,21 @@ class MapPanel extends Component {
 }
 export default withPlatform(
   withSession(
-    withNotifications(
-      compose(
-        withProps({
-          googleMapURL:
-            'https://maps.googleapis.com/maps/api/js?key=AIzaSyCsmniogYj-rg23fhKjRH21QkUz3VoyP-o&v=3.exp&libraries=geometry,drawing,places',
-          loadingElement: (
-            <div id="loadingelement" style={{ height: `100%` }} />
-          ),
-          mapElement: <div id="mapelement" style={{ height: `100%` }} />,
-        }),
-        withScriptjs,
-        withGoogleMap
-      )(MapPanel)
+    withMapSize(
+      withNotifications(
+        compose(
+          withProps({
+            googleMapURL:
+              'https://maps.googleapis.com/maps/api/js?key=AIzaSyCsmniogYj-rg23fhKjRH21QkUz3VoyP-o&v=3.exp&libraries=geometry,drawing,places',
+            loadingElement: (
+              <div id="loadingelement" style={{ height: `100%` }} />
+            ),
+            mapElement: <div id="mapelement" style={{ height: `100%` }} />,
+          }),
+          withScriptjs,
+          withGoogleMap
+        )(MapPanel)
+      )
     )
   )
 )
