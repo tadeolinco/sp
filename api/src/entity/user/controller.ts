@@ -34,6 +34,7 @@ const controller = {
         }
 
         const user = await userRepository.save(req.body)
+        req.session.user = user
         res.status(200).json({ user })
       } catch (err) {
         console.log(err.message)

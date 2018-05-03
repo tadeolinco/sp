@@ -1,6 +1,6 @@
 // https://en.wikipedia.org/wiki/A%2a_search_algorithm#Pseudocode
 import { getRepository } from 'typeorm'
-import * as FastPriorityQueue from 'fastpriorityqueue'
+import * as StablePriorityQueue from 'stablepriorityqueue'
 
 import Node from '../entity/node/entity'
 import computeDistance from './computeDistance'
@@ -13,7 +13,7 @@ const constructPath = (cameFrom, current) => {
     path.unshift(current)
   }
 
-  const routes = [path[0].route]
+  let routes = [path[0].route]
   routes[0].nodes = []
 
   path.forEach(node => {
@@ -27,10 +27,6 @@ const constructPath = (cameFrom, current) => {
       route.nodes = [{ lat: node.lat, lng: node.lng, id: node.id }]
     }
   })
-  for (const route of routes) {
-    console.log(route.id)
-    console.log(route.nodes)
-  }
   return routes
 }
 
@@ -69,8 +65,9 @@ const getPath = async (start, goal) => {
     return map
   }, {})
 
-  const compareFunction = (a: Node, b: Node) => fScore[a.id] - fScore[b.id]
-  const openSet = new FastPriorityQueue(compareFunction)
+  const compareFunction = (a, b) => fScore[a] - fScore[b]
+  // const openSet = []
+  const openSet = new StablePriorityQueue(compareFunction)
   const closedSet = {}
   const cameFrom = {}
 
@@ -83,13 +80,14 @@ const getPath = async (start, goal) => {
   gScore[start.id] = 0
   fScore[start.id] = computeDistance(start, goal)
 
+  // openSet.push(start.id)
   openSet.add(start.id)
 
   while (!openSet.isEmpty()) {
     const current: Node = nodeMap[openSet.poll()]
 
-    if (current.id === goal.id) {
-      return constructPath(cameFrom, goal)
+    if (computeDistance(current, goal) === 0) {
+      return constructPath(cameFrom, current)
     }
 
     closedSet[current.id] = true
@@ -97,22 +95,18 @@ const getPath = async (start, goal) => {
     for (const neighbor of current.paths) {
       if (closedSet[neighbor.id]) continue
 
-      openSet.add(neighbor.id)
-
-      let tempG = gScore[current.id] + computeDistance(current, neighbor)
-      if (
-        nodeMap[neighbor.id].route.id !== current.route.id ||
-        (neighbor.lat === current.lat && neighbor.lng === current.lng)
-      ) {
-        tempG *= 2
+      let tempG = gScore[current.id] + computeDistance(neighbor, current)
+      if (nodeMap[neighbor.id].route.id !== current.route.id) {
+        tempG += gScore[current.id]
       }
-
       if (tempG >= gScore[neighbor.id]) continue
 
       cameFrom[neighbor.id] = current
       gScore[neighbor.id] = tempG
       fScore[neighbor.id] =
         gScore[neighbor.id] + computeDistance(neighbor, goal)
+
+      openSet.add(neighbor.id)
     }
   }
 

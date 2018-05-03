@@ -14,7 +14,9 @@ class Nav extends Component {
       await Axios.post('/api/logout')
 
       session.changeUser(null)
-
+      if (this.props.mapMode === MAP_MODE.ADD_ROUTE) {
+        this.props.changeMapMode(MAP_MODE.VIEW)
+      }
       this.props.notifications.enqueue(`Bye!`, 'success')
     } catch ({ response }) {
       this.props.notifications.enqueue(response.data.message, 'error')

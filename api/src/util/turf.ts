@@ -1,5 +1,6 @@
 import { lineString } from '@turf/helpers'
 import lineIntersect from '@turf/line-intersect'
+import computeDistance from './computeDistance'
 
 export const intersection = (startA, endA, startB, endB) => {
   const line1 = lineString([[startA.lat, startA.lng], [endA.lat, endA.lng]])
@@ -25,18 +26,24 @@ export const intersection = (startA, endA, startB, endB) => {
 //   return !!lineOverlap(line, pt).features.length
 // }
 
-export const overlaps = (start, end, point, tolerance = 6e-5) => {
-  if (start.lat > end.lat) {
-    const temp = { ...start }
-    start = { ...end }
-    end = { ...temp }
-  }
-  const f = x =>
-    (end.lng - start.lng) / (end.lat - start.lat) * (x - start.lat) + start.lng
+export const overlaps = (start, point, end) => {
+  // if (start.lat > end.lat) {
+  //   const temp = { ...start }
+  //   start = { ...end }
+  //   end = { ...temp }
+  // }
+  // const f = x =>
+  //   (end.lng - start.lng) / (end.lat - start.lat) * (x - start.lat) + start.lng
 
+  // return (
+  //   Math.abs(f(point.lat) - point.lng) < threshold &&
+  //   point.lat > start.lat &&
+  //   point.lat < end.lat
+  // )
   return (
-    Math.abs(f(point.lat) - point.lng) < tolerance &&
-    point.lat >= start.lat &&
-    point.lat <= end.lat
+    computeDistance(start, point) +
+      computeDistance(point, end) -
+      computeDistance(start, end) ===
+    0
   )
 }

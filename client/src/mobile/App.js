@@ -16,6 +16,7 @@ class App extends Component {
       <Fragment>
         <div ref={divElement => (this.divElement = divElement)}>
           <Nav
+            mapMode={this.state.mapMode}
             toggleVisible={this.toggleVisible}
             changeMapMode={this.changeMapMode}
           />

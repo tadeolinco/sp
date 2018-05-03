@@ -1,17 +1,18 @@
 import React, { Component } from 'react'
 import { Message, Transition } from 'semantic-ui-react'
+import { withPlatform } from './PlatformProvider'
 
 const ANIMATION_DURATION = 1000
 
-const NotificationsContext = React.createContext()
+const { Provider, Consumer } = React.createContext()
 
 export const withNotifications = Component => props => (
-  <NotificationsContext.Consumer>
+  <Consumer>
     {notifications => <Component {...props} notifications={notifications} />}
-  </NotificationsContext.Consumer>
+  </Consumer>
 )
 
-export class NotificationsProvider extends Component {
+class InnerNotificationsProvider extends Component {
   state = {
     messages: [],
     visible: false,
@@ -83,22 +84,28 @@ export class NotificationsProvider extends Component {
   }
 
   render() {
+    const style = {
+      position: 'absolute',
+      marginLeft: 'auto',
+      marginRight: 'auto',
+      left: '10%',
+      right: '10%',
+      top: 10,
+      zIndex: 2000,
+    }
+    if (!this.props.platform.isMobile) {
+      style.left = '40%'
+      style.right = '40%'
+    }
+
     return (
-      <NotificationsContext.Provider value={this.state}>
+      <Provider value={this.state}>
         <Transition.Group animation="fly down" duration={ANIMATION_DURATION}>
           {this.state.visible &&
             !!this.state.messages.length && (
               <Message
                 onClick={this.state.dequeue}
-                style={{
-                  position: 'absolute',
-                  marginLeft: 'auto',
-                  marginRight: 'auto',
-                  left: '10%',
-                  right: '10%',
-                  top: 10,
-                  zIndex: 2000,
-                }}
+                style={style}
                 info={this.state.messages[0].type === 'info'}
                 warning={this.state.messages[0].type === 'warning'}
                 success={this.state.messages[0].type === 'success'}
@@ -115,7 +122,9 @@ export class NotificationsProvider extends Component {
             )}
         </Transition.Group>
         {this.props.children}
-      </NotificationsContext.Provider>
+      </Provider>
     )
   }
 }
+
+export const NotificationsProvider = withPlatform(InnerNotificationsProvider)

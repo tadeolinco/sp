@@ -1,7 +1,7 @@
 import { getConnection, getRepository } from 'typeorm'
 import { snapToRoads } from '../../googleMaps'
 import getPath from '../../util/getPath'
-import { intersection } from '../../util/turf'
+import { intersection, overlaps } from '../../util/turf'
 import { isLoggedIn } from '../auth/middlware'
 import Node from '../node/entity'
 import User from '../user/entity'
@@ -106,10 +106,10 @@ const controller = {
           if (index === 0) return true
           const pathNode2 = path[index - 1]
           if (
-            Math.round(pathNode.lat * exp) / exp ===
-              Math.round(pathNode2.lat * exp) / exp &&
-            Math.round(pathNode.lng * exp) / exp ===
-              Math.round(pathNode2.lng * exp) / exp
+            Math.ceil(pathNode.lat * exp) / exp ===
+              Math.ceil(pathNode2.lat * exp) / exp &&
+            Math.ceil(pathNode.lng * exp) / exp ===
+              Math.ceil(pathNode2.lng * exp) / exp
           )
             return false
 
@@ -140,6 +140,11 @@ const controller = {
           relations: ['paths', 'route'],
         })
 
+        const nodesMap = nodes.reduce((map, node) => {
+          map[node.id] = node
+          return map
+        }, {})
+
         /// Create nodes from the provided path (we need the ids later)
         await getConnection()
           .createQueryBuilder()
@@ -149,134 +154,228 @@ const controller = {
           .execute()
 
         /// Refetch the path nodes (to get the ids)
-        const path = await nodeRepository.find({ route })
+        let pathNodes = await nodeRepository.find({ route })
 
         /// Create initial paths for the new nodes
         await Promise.all(
-          path.map((p, index) => {
+          pathNodes.map((p, index) => {
             const paths = []
             if (index === 0) {
-              paths.push(path[1].id)
-            } else if (index === path.length - 1) {
-              paths.push(path[path.length - 2].id)
+              paths.push(pathNodes[1].id)
+            } else if (index === pathNodes.length - 1) {
+              paths.push(pathNodes[pathNodes.length - 2].id)
             } else {
-              paths.push(path[index - 1].id, path[index + 1].id)
+              paths.push(pathNodes[index - 1].id, pathNodes[index + 1].id)
             }
             return updatePath(p.id, paths, [])
           })
         )
 
-        const keys = {}
-        const pathKeys = {}
-        /// Loop over all nodes and their paths
-        for (const node1 of nodes) {
-          for (const node2 of node1.paths) {
-            /// Cross check with all new nodes
-            for (let i = 1; i < path.length; ++i) {
-              const pathNode1 = path[i - 1]
-              const pathNode2 = path[i]
+        pathNodes = await nodeRepository
+          .createQueryBuilder('node')
+          .innerJoinAndSelect('node.paths', 'paths')
+          .innerJoinAndSelect('node.route', 'route')
+          .where('node.routeId = :routeId', { routeId: route.id })
+          .getMany()
 
-              /// Check if this pairing has already been visited
+        let pathNodesMap = pathNodes.reduce((map, node) => {
+          map[node.id] = node
+          return map
+        }, {})
+
+        let pathKeys = {}
+
+        let promises = []
+        for (let i = 1; i < pathNodes.length; ++i) {
+          const pathNode1 = pathNodes[i - 1]
+          const pathNode2 = pathNodes[i]
+          for (let j = 0; j < pathNodes.length; ++j) {
+            const middleNode = pathNodes[j]
+            if (
+              j !== i &&
+              j !== i - 1 &&
+              overlaps(pathNode1, middleNode, pathNode2)
+            ) {
               if (
-                keys[
-                  `${node1.id}@${node2.id}@${pathNode1.id}@${pathNode2.id}`
-                ] ||
-                keys[`${node2.id}@${node1.id}@${pathNode1.id}@${pathNode2.id}`]
-              )
-                continue
-
-              keys[
-                `${node1.id}@${node2.id}@${pathNode1.id}@${pathNode2.id}`
-              ] = 1
-
-              let sameNode1 = null
-              let sameNode2 = null
-              if (node2.lat === pathNode2.lat && node2.lng === pathNode2.lng) {
-                sameNode1 = node2
-                sameNode2 = pathNode2
-              } else if (
-                node1.lat === pathNode2.lat &&
-                node1.lng === pathNode2.lng
+                pathNode1.lat === middleNode.lat &&
+                pathNode1.lng === middleNode.lng &&
+                !pathKeys[`${pathNode1.id}@${middleNode.id}`]
               ) {
-                sameNode1 = node1
-                sameNode2 = pathNode2
-              } else if (
-                node1.lat === pathNode1.lat &&
-                node1.lng === pathNode1.lng
-              ) {
-                sameNode1 = node1
-                sameNode2 = pathNode1
-              } else if (
-                node2.lat === pathNode1.lat &&
-                node2.lng === pathNode1.lng
-              ) {
-                sameNode1 = node2
-                sameNode2 = pathNode1
-              }
-
-              if (sameNode1 && sameNode2) {
-                if (
-                  !pathKeys[`${sameNode1.id}@${sameNode2.id}`] &&
-                  !pathKeys[`${sameNode2.id}@${sameNode1.id}`]
-                ) {
-                  await Promise.all([
-                    updatePath(sameNode1, [sameNode2], []),
-                    updatePath(sameNode2, [sameNode1], []),
-                  ])
-                }
-                pathKeys[`${sameNode1.id}@${sameNode2.id}`] = true
-              } else {
-                const intersectingNode = intersection(
-                  node1,
-                  node2,
-                  pathNode1,
-                  pathNode2
+                pathKeys[`${pathNode1.id}@${middleNode.id}`] = true
+                pathKeys[`${middleNode.id}@${pathNode1.id}`] = true
+                promises.push(
+                  updatePath(pathNode1, [middleNode], []),
+                  updatePath(middleNode, [pathNode1], [])
                 )
-
-                if (intersectingNode) {
-                  console.log('found an intersecting node')
-                  const responses = await Promise.all([
-                    nodeRepository.save({
-                      ...intersectingNode,
-                      route,
-                    }),
-                    nodeRepository.save({
-                      ...intersectingNode,
-                      route: node1.route,
-                    }),
-                  ])
-                  const newPathNode: any = responses[0]
-                  const newNode: any = responses[1]
-                  await Promise.all([
-                    updatePath(
-                      newNode,
-                      [node1, node2, pathNode1, pathNode2],
-                      []
-                    ),
-                    updatePath(
-                      newPathNode,
-                      [node1, node2, pathNode1, pathNode2],
-                      []
-                    ),
-                    updatePath(node1, [newNode, newPathNode], [node2]),
-                    updatePath(node2, [newNode, newPathNode], [node1]),
-                    updatePath(pathNode1, [newNode, newPathNode], [pathNode2]),
-                    updatePath(pathNode2, [newNode, newPathNode], [pathNode1]),
-                  ])
-                }
-                // @TODO: handle over laps if ever necessary
-                // else {
-                //   let pathNode = null
-                //   if (overlaps(node1, node2, pathNode1)) pathNode = { ...pathNode1 }
-                //   else if (overlaps(node1, node2, pathNode2))
-                //     pathNode = { ...pathNode2 }
-                //   if (!pathNode) {
-                //   }
-                // }
+                pathNode1.paths.push({ ...middleNode })
+                middleNode.paths.push({ ...pathNode1 })
+              } else if (
+                pathNode2.lat === middleNode.lat &&
+                pathNode2.lng === middleNode.lng &&
+                !pathKeys[`${pathNode2.id}@${middleNode.id}`]
+              ) {
+                pathKeys[`${pathNode2.id}@${middleNode.id}`] = true
+                pathKeys[`${middleNode.id}@${pathNode2.id}`] = true
+                promises.push(
+                  updatePath(pathNode2, [middleNode], []),
+                  updatePath(middleNode, [pathNode2], [])
+                )
+                pathNode2.paths.push({ ...middleNode })
+                middleNode.paths.push({ ...pathNode2 })
+              } else if (
+                !pathKeys[`${pathNode1.id}@${middleNode.id}`] &&
+                !pathKeys[`${pathNode2.id}@${middleNode.id}`]
+              ) {
+                pathKeys[`${pathNode2.id}@${middleNode.id}`] = true
+                pathKeys[`${middleNode.id}@${pathNode2.id}`] = true
+                pathKeys[`${pathNode1.id}@${middleNode.id}`] = true
+                pathKeys[`${middleNode.id}@${pathNode1.id}`] = true
+                promises.push(
+                  updatePath(pathNode1, [middleNode], [pathNode2]),
+                  updatePath(middleNode, [pathNode1, pathNode2], []),
+                  updatePath(pathNode2, [middleNode], [pathNode1])
+                )
+                pathNode1.paths = pathNode1.paths.filter(
+                  node => node.id !== pathNode2.id
+                )
+                pathNode1.paths.push({ ...middleNode })
+                middleNode.paths.push({ ...pathNode1 }, { ...pathNode2 })
+                pathNode2.paths = pathNode2.paths.filter(
+                  node => node.id !== pathNode1.id
+                )
+                pathNode2.paths.push({ ...middleNode })
               }
             }
           }
         }
+
+        await Promise.all(promises)
+
+        // pathNodes = await nodeRepository
+        //   .createQueryBuilder('node')
+        //   .innerJoinAndSelect('node.paths', 'paths')
+        //   .innerJoinAndSelect('node.route', 'route')
+        //   .where('node.routeId = :routeId', { routeId: route.id })
+        //   .getMany()
+
+        pathNodesMap = pathNodes.reduce((map, node) => {
+          map[node.id] = node
+          return map
+        }, {})
+
+        promises = []
+        pathKeys = {}
+        /// Loop over all nodes and their paths
+        for (const node1 of nodes) {
+          for (const node2 of node1.paths) {
+            for (const pathNode1 of pathNodes) {
+              if (
+                overlaps(node1, pathNode1, node2) &&
+                !pathKeys[`${node1.route.id}@${pathNode1.lat}@${pathNode1.lng}`]
+              ) {
+                if (
+                  pathNode1.lat === node1.lat &&
+                  pathNode1.lng === node1.lng
+                ) {
+                  pathKeys[
+                    `${node1.route.id}@${pathNode1.lat}@${pathNode1.lng}`
+                  ] = true
+                  pathKeys[
+                    `${pathNode1.route.id}@${node1.lat}@${node1.lng}`
+                  ] = true
+                  promises.push(
+                    updatePath(pathNode1, [node1], []),
+                    updatePath(node1, [pathNode1], [])
+                  )
+                } else if (
+                  pathNode1.lat === node2.lat &&
+                  pathNode1.lng === node2.lng
+                ) {
+                  pathKeys[
+                    `${nodesMap[node2.id].route.id}@${pathNode1.lat}@${
+                      pathNode1.lng
+                    }`
+                  ] = true
+                  pathKeys[
+                    `${pathNode1.route.id}@${node2.lat}@${node2.lng}`
+                  ] = true
+                  promises.push(
+                    updatePath(pathNode1, [node2], []),
+                    updatePath(node2, [pathNode1], [])
+                  )
+                } else {
+                  pathKeys[
+                    `${node1.route.id}@${pathNode1.lat}@${pathNode1.lng}`
+                  ] = true
+                  const newNode = await nodeRepository.save({
+                    lat: pathNode1.lat,
+                    lng: pathNode1.lng,
+                    route: node1.route,
+                  })
+                  promises.push(
+                    updatePath(node1, [newNode], [node2]),
+                    updatePath(newNode, [node1, node2, pathNode1], []),
+                    updatePath(node2, [newNode], [node1])
+                  )
+                }
+              }
+              for (const pathNode2 of pathNode1.paths) {
+                if (
+                  overlaps(pathNode1, node1, pathNode2) &&
+                  !pathKeys[`${pathNode1.route.id}@${node1.lat}@${node1.lng}`]
+                ) {
+                  if (
+                    pathNode1.lat === node1.lat &&
+                    pathNode1.lng === node1.lng
+                  ) {
+                    pathKeys[
+                      `${node1.route.id}@${pathNode1.lat}@${pathNode1.lng}`
+                    ] = true
+                    pathKeys[
+                      `${pathNode1.route.id}@${node1.lat}@${node1.lng}`
+                    ] = true
+                    promises.push(
+                      updatePath(pathNode1, [node1], []),
+                      updatePath(node1, [pathNode1], [])
+                    )
+                  } else if (
+                    pathNode2.lat === node1.lat &&
+                    pathNode2.lng === node1.lng
+                  ) {
+                    pathKeys[
+                      `${node1.route.id}@${pathNode2.lat}@${pathNode2.lng}`
+                    ] = true
+                    pathKeys[
+                      `${pathNodesMap[pathNode2.id].route.id}@${node1.lat}@${
+                        node1.lng
+                      }`
+                    ] = true
+                    promises.push(
+                      updatePath(pathNode2, [node1], []),
+                      updatePath(node1, [pathNode2], [])
+                    )
+                  } else {
+                    pathKeys[
+                      `${pathNode1.route.id}@${node1.lat}@${node1.lng}`
+                    ] = true
+                    const newNode = await nodeRepository.save({
+                      lat: node1.lat,
+                      lng: node1.lng,
+                      route: pathNode1.route,
+                    })
+                    promises.push(
+                      updatePath(pathNode1, [newNode], [pathNode2]),
+                      updatePath(newNode, [pathNode1, pathNode2, node1], []),
+                      updatePath(pathNode2, [newNode], [pathNode2])
+                    )
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        await Promise.all(promises)
 
         if (!req.session.user.hasCreatedRoute) {
           await getConnection()
@@ -285,15 +384,47 @@ const controller = {
             .set({ hasCreatedRoute: true })
             .where('id = :id', { id: req.session.user.id })
             .execute()
+          req.session.user.hasCreatedRoute = true
         }
 
+        const newRoute: any = await getRepository(Route).findOneById(route.id, {
+          relations: ['nodes', 'nodes.paths', 'nodes.paths.route'],
+        })
+        let firstNodeId = Number.POSITIVE_INFINITY
+        const allNodes = newRoute.nodes.reduce((map, node) => {
+          if (node.id < firstNodeId) firstNodeId = node.id
+          map[node.id] = node
+          return map
+        }, {})
+
+        const newPath = []
+        const newKeys = {}
+        let node = allNodes[firstNodeId]
+
+        newKeys[node.id] = 1
+        newPath.push(node)
+
+        while (Object.keys(newKeys).length !== newRoute.nodes.length) {
+          let found = false
+          for (const pathNode of node.paths) {
+            if (!newKeys[pathNode.id] && pathNode.route.id === newRoute.id) {
+              node = allNodes[pathNode.id]
+              newKeys[node.id] = 1
+              newPath.push(node)
+              found = true
+              break
+            }
+          }
+          if (!found) break
+        }
+
+        newRoute.nodes = newPath.map(p => ({
+          lat: p.lat,
+          lng: p.lng,
+          id: p.id,
+        }))
         res.status(200).json({
-          route: await getRepository(Route)
-            .createQueryBuilder('route')
-            .leftJoinAndSelect('route.nodes', 'node')
-            .orderBy('node.lat')
-            .where('route.id = :id', { id: route.id })
-            .getOne(),
+          route: newRoute,
         })
       } catch (err) {
         console.log(err)

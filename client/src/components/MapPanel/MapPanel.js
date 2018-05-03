@@ -21,32 +21,20 @@ import SetPanel from './SetPanel'
 import destinationLogo from './assets/destination.svg'
 import originLogo from './assets/origin.svg'
 import mapStyles from './style.json'
+import VehicleMarker from './VehicleMarker'
 
-const randomColor = () => {
-  const colors = [
-    '0',
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
-    'a',
-    'b',
-    'c',
-    'd',
-    'e',
-    'f',
-  ]
-  let color = ''
-  while (color.length < 6) {
-    color += colors[Math.floor(Math.random() * colors.length)]
-  }
-  return '#' + color
-}
+const assortedColors = [
+  '#db2828',
+  '#f2711c',
+  '#fbbd08',
+  '#b5cc18',
+  '#21ba45',
+  '#00b5ad',
+  '#2185d0',
+  '#6435c9',
+  '#a333c8',
+  '#e03997',
+]
 
 class MapPanel extends Component {
   initialState = {
@@ -114,9 +102,7 @@ class MapPanel extends Component {
 
   componentDidUpdate(prevProps, prevState) {
     if (prevProps.mapMode !== this.props.mapMode) {
-      this.props.notifications.clear()
-      this.setState({ ...this.initialState })
-      this.componentDidMount()
+      this.setState({ ...this.initialState, routes: this.state.routes })
       if (this.props.mapMode === MAP_MODE.ADD_ROUTE) {
         this.setState({
           origin: {
@@ -520,15 +506,18 @@ class MapPanel extends Component {
     }
 
     const commutePath = this.state.path.map((path, index) => (
-      <Polyline
-        key={`${path.id}-${index}`}
-        path={path.nodes}
-        options={{
-          strokeColor: randomColor(),
-          strokeWeight: 5,
-        }}
-        onClick={this.handleMapClick}
-      />
+      <Fragment>
+        <Polyline
+          key={`${path.id}-${index}`}
+          path={path.nodes}
+          options={{
+            strokeColor: assortedColors[index % assortedColors.length],
+            strokeWeight: 5,
+          }}
+          onClick={this.handleMapClick}
+        />
+        <VehicleMarker key={path.id} path={path} />
+      </Fragment>
     ))
 
     const allRoutes = this.state.path.length
@@ -539,7 +528,7 @@ class MapPanel extends Component {
             path={route.nodes}
             options={{
               // strokeColor: '#21ba45',
-              strokeColor: randomColor(),
+              strokeColor: '#1b1c1d',
               strokeWeight: 5,
             }}
             onClick={this.handleMapClick}
@@ -740,10 +729,10 @@ class MapPanel extends Component {
                   onCloseClick={this.handleCloseSetPanel}
                 />
               )}
-              {originMarker}
-              {destinationMarker}
               {allRoutes}
               {commutePath}
+              {originMarker}
+              {destinationMarker}
             </Fragment>
           )}
           {this.props.mapMode === MAP_MODE.ADD_ROUTE && (
@@ -758,12 +747,22 @@ class MapPanel extends Component {
             </Fragment>
           )}
           {tentativePathPolyline}
+          {/* {this.state.routes.map(route => (
+            <Fragment key={route.id}>
+              {route.nodes.map(node => (
+                <Marker
+                  key={node.id}
+                  position={{ lat: node.lat, lng: node.lng }}
+                  onClick={() => console.log(node.id, node.lat, node.lng)}
+                />
+              ))}
+            </Fragment>
+          ))} */}
         </GoogleMap>
       </Fragment>
     )
   }
 }
-
 export default withPlatform(
   withSession(
     withNotifications(

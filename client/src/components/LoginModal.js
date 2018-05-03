@@ -4,6 +4,7 @@ import { Button, Form, FormInput, Message, Modal } from 'semantic-ui-react'
 import { withNotifications } from '../providers/NotificationsProvider'
 import { withSession } from '../providers/SessionProvider'
 import withForm from '../util/withForm'
+import { withPlatform } from '../providers/PlatformProvider'
 
 class LoginModal extends Component {
   state = { loading: false }
@@ -37,12 +38,21 @@ class LoginModal extends Component {
   }
 
   render() {
-    const { form, trigger } = this.props
+    const { form, trigger, platform } = this.props
 
-    const style = { marginTop: 0, width: '100%' }
+    const style = {
+      marginTop: 0,
+      width: '100%',
+      marginLeft: 'auto',
+      marginRight: 'auto',
+    }
+    if (!platform.isMobile) {
+      style.maxWidth = '425px'
+    }
+
     return (
       <Modal
-        closeIcon
+        closeIcon={platform.isMobile}
         trigger={trigger}
         onClose={this.onClose}
         style={style}
@@ -75,24 +85,26 @@ class LoginModal extends Component {
   }
 }
 
-export default withNotifications(
-  withSession(
-    withForm(LoginModal, {
-      username: {
-        validator: value => {
-          if (!value) {
-            return 'Username is required.'
-          }
+export default withPlatform(
+  withNotifications(
+    withSession(
+      withForm(LoginModal, {
+        username: {
+          validator: value => {
+            if (!value) {
+              return 'Username is required.'
+            }
+          },
         },
-      },
 
-      password: {
-        validator: value => {
-          if (!value) {
-            return 'Password is required.'
-          }
+        password: {
+          validator: value => {
+            if (!value) {
+              return 'Password is required.'
+            }
+          },
         },
-      },
-    })
+      })
+    )
   )
 )

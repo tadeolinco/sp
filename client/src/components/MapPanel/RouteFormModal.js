@@ -5,6 +5,7 @@ import { MAP_MODE } from '../../constants'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withSession } from '../../providers/SessionProvider'
 import withForm from '../../util/withForm'
+import { withPlatform } from '../../providers/PlatformProvider'
 
 const modes = ['Jeepney', 'Bus', 'Train', 'Shuttle Service', 'UV Express'].map(
   mode => ({ text: mode, value: mode })
@@ -19,10 +20,7 @@ class RouteFormModal extends Component {
     e.preventDefault()
     const { mapPanel, notifications, form, session } = this.props
     try {
-      notifications.clear(() => {
-        notifications.enqueue('This might take some time...', 'info')
-      })
-      mapPanel.props.changeMapMode(MAP_MODE.VIEW)
+      this.setState({ loading: true })
       const {
         data: { route },
       } = await Axios.post('/api/routes', {
@@ -34,14 +32,19 @@ class RouteFormModal extends Component {
       notifications.clear(() => {
         notifications.enqueue('Successfully added route!', 'success')
       })
-      mapPanel.setState({
-        routes: [...mapPanel.state.routes, route].filter(
-          route => route.nodes.length
-        ),
-      })
-    } catch ({ response }) {
+      mapPanel.setState(
+        {
+          routes: [...mapPanel.state.routes, route],
+        },
+        () => {
+          mapPanel.props.changeMapMode(MAP_MODE.VIEW)
+        }
+      )
+    } catch (err) {
       notifications.clear(() => {
-        notifications.enqueue(response.data.message, 'error')
+        notifications.enqueue(err.response.data.message, 'error')
+
+        this.setState({ loading: false })
       })
     }
   }
@@ -53,10 +56,18 @@ class RouteFormModal extends Component {
 
   render() {
     const { trigger, form } = this.props
-    const style = { marginTop: 0, width: '100%' }
+    const style = {
+      marginTop: 0,
+      width: '100%',
+      marginLeft: 'auto',
+      marginRight: 'auto',
+    }
+    if (!this.props.platform.isMobile) {
+      style.maxWidth = '425px'
+    }
     return (
       <Modal
-        closeIcon
+        closeIcon={this.props.platform.isMobile}
         style={style}
         trigger={trigger}
         onClose={this.handleOnClose}
@@ -89,13 +100,15 @@ class RouteFormModal extends Component {
   }
 }
 
-export default withNotifications(
-  withSession(
-    withForm(RouteFormModal, {
-      modeOfTransportation: {
-        initialValue: modes[0].value,
-      },
-      description: {},
-    })
+export default withPlatform(
+  withNotifications(
+    withSession(
+      withForm(RouteFormModal, {
+        modeOfTransportation: {
+          initialValue: modes[0].value,
+        },
+        description: {},
+      })
+    )
   )
 )
