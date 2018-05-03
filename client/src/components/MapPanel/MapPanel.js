@@ -312,6 +312,7 @@ class MapPanel extends Component {
         () => {
           if (!path.length) {
             this.props.notifications.enqueue('No path was found.', 'warning')
+            this.handleFitMarkers({ origin, destination })
           } else {
             this.handleFitMarkers({
               origin: upperBound,
