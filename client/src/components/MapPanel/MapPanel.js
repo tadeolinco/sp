@@ -10,7 +10,7 @@ import {
   withScriptjs,
 } from 'react-google-maps'
 import { compose, withProps } from 'recompose'
-import { Button, Icon } from 'semantic-ui-react'
+import { Button, Icon, Divider } from 'semantic-ui-react'
 import { ADD_ROUTE, DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
@@ -580,7 +580,6 @@ class MapPanel extends Component {
   }
 
   render() {
-    console.log(this.state)
     const options = {
       styles: mapStyles,
       disableDefaultUI: true,
@@ -852,7 +851,35 @@ class MapPanel extends Component {
                 this.setState({ selectedRoute: null })
               }}
             >
-              <h1>hello</h1>
+              <div style={{ color: '#1b1c1d' }}>
+                <div style={{ fontWeight: 'bold' }}>Mode of Transportation</div>
+                <div>{this.state.selectedRoute.mode}</div>
+                <div style={{ fontWeight: 'bold' }}>Description</div>
+                <div>{this.state.selectedRoute.description || 'None'}</div>
+                <br />
+                <div>
+                  <span>0</span>{' '}
+                  <Icon
+                    style={{ cursor: 'pointer' }}
+                    name="thumbs outline up"
+                    size="large"
+                  />
+                  <span>0</span>{' '}
+                  <Icon
+                    style={{ cursor: 'pointer' }}
+                    name="thumbs outline down"
+                    size="large"
+                  />
+                </div>
+                <br />
+                {this.state.selectedRoute.ownerId ===
+                  this.props.session.user.id && (
+                  <Fragment>
+                    <Button color="blue">Update</Button>
+                    <Button color="red">Remove</Button>
+                  </Fragment>
+                )}
+              </div>
             </InfoWindow>
           )}
         </GoogleMap>

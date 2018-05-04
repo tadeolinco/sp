@@ -23,9 +23,13 @@ class User {
   @OneToMany(type => Route, route => route.owner)
   routes: Route[]
 
-  @ManyToMany(type => Route, route => route.reporters)
+  @ManyToMany(type => Route, route => route.likers)
   @JoinTable()
-  reports: Route[]
+  likes: Route[]
+
+  @ManyToMany(type => Route, route => route.dislikers)
+  @JoinTable()
+  dislikes: Route[]
 }
 
 export default User

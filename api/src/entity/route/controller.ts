@@ -495,39 +495,33 @@ const controller = {
     path: '/routes/:id/reports',
     middlewares: [isLoggedIn],
     handler: async (req, res) => {
-      try {
-        const routeRepository = getRepository(Route)
-
-        const { user } = req.session
-
-        const route = await routeRepository.findOneById(req.params.id, {
-          relations: ['reporters'],
-        })
-        if (!route) {
-          return res.status(404).json({ message: 'Route does not exist.' })
-        }
-
-        const found = route.reporters.find(reporter => reporter.id === user.id)
-        if (found) {
-          return res
-            .status(400)
-            .json({ message: 'User has already reported the route.' })
-        }
-
-        const reportThreshold = 10
-
-        if (route.reporters.length >= reportThreshold - 1) {
-          await routeRepository.remove(route)
-          return res.status(200).json({ data: null })
-        }
-
-        route.reporters.push(user)
-        await routeRepository.save(route)
-        return res.status(200).json({ data: route })
-      } catch (err) {
-        console.log(err.message)
-        res.status(500).json({ message: 'Internal server error.' })
-      }
+      // try {
+      //   const routeRepository = getRepository(Route)
+      //   const { user } = req.session
+      //   const route = await routeRepository.findOneById(req.params.id, {
+      //     relations: ['reporters'],
+      //   })
+      //   if (!route) {
+      //     return res.status(404).json({ message: 'Route does not exist.' })
+      //   }
+      //   const found = route.reporters.find(reporter => reporter.id === user.id)
+      //   if (found) {
+      //     return res
+      //       .status(400)
+      //       .json({ message: 'User has already reported the route.' })
+      //   }
+      //   const reportThreshold = 10
+      //   if (route.reporters.length >= reportThreshold - 1) {
+      //     await routeRepository.remove(route)
+      //     return res.status(200).json({ data: null })
+      //   }
+      //   route.reporters.push(user)
+      //   await routeRepository.save(route)
+      //   return res.status(200).json({ data: route })
+      // } catch (err) {
+      //   console.log(err.message)
+      //   res.status(500).json({ message: 'Internal server error.' })
+      // }
     },
   },
 
@@ -536,40 +530,32 @@ const controller = {
     path: '/routes/:id/reports',
     middlewares: [isLoggedIn],
     handler: async (req, res) => {
-      try {
-        const routeRepository = getRepository(Route)
-
-        const { user } = req.session
-
-        const route = await routeRepository.findOneById(req.params.id, {
-          relations: ['reporters'],
-        })
-
-        if (!route) {
-          return res.status(404).json({ message: 'Route does not exist.' })
-        }
-
-        const reporter = route.reporters.find(
-          reporter => reporter.id === user.id
-        )
-
-        if (!reporter) {
-          return res
-            .status(400)
-            .json({ message: 'User has not reported this route.' })
-        }
-
-        route.reporters = route.reporters.filter(
-          reporter => reporter.id !== req.params.userId
-        )
-
-        await routeRepository.save(route)
-
-        res.status(200).json({ data: route })
-      } catch (err) {
-        console.log(err.message)
-        res.status(500).json({ message: 'Internal server error.' })
-      }
+      // try {
+      //   const routeRepository = getRepository(Route)
+      //   const { user } = req.session
+      //   const route = await routeRepository.findOneById(req.params.id, {
+      //     relations: ['reporters'],
+      //   })
+      //   if (!route) {
+      //     return res.status(404).json({ message: 'Route does not exist.' })
+      //   }
+      //   const reporter = route.reporters.find(
+      //     reporter => reporter.id === user.id
+      //   )
+      //   if (!reporter) {
+      //     return res
+      //       .status(400)
+      //       .json({ message: 'User has not reported this route.' })
+      //   }
+      //   route.reporters = route.reporters.filter(
+      //     reporter => reporter.id !== req.params.userId
+      //   )
+      //   await routeRepository.save(route)
+      //   res.status(200).json({ data: route })
+      // } catch (err) {
+      //   console.log(err.message)
+      // res.status(500).json({ message: 'Internal server error.' })
+      // }
     },
   },
 }

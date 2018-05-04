@@ -1,19 +1,20 @@
 // https://en.wikipedia.org/wiki/A%2a_search_algorithm#Pseudocode
-import { getRepository } from 'typeorm'
+import { getRepository, getConnection } from 'typeorm'
 import * as StablePriorityQueue from 'stablepriorityqueue'
 
 import Node from '../entity/node/entity'
 import computeDistance from './computeDistance'
 import { getDistance } from '../googleMaps'
+import Route from '../entity/route/entity'
 
-const constructPath = (cameFrom, current) => {
+const constructPath = async (cameFrom, current) => {
   let path = [current]
   while (cameFrom[current.id]) {
     current = cameFrom[current.id]
     path.unshift(current)
   }
 
-  let routes = [path[0].route]
+  let routes: any = [path[0].route]
   routes[0].nodes = []
 
   path.forEach(node => {
@@ -28,10 +29,21 @@ const constructPath = (cameFrom, current) => {
     }
   })
 
+  const routeRepository = getRepository(Route)
   routes = routes.filter(route => route.nodes.length > 1)
-  // for (const route of routes) {
-  //   console.log(`Route[${route.id}] = ${route.nodes.length}`)
-  // }
+  const responses: any = await Promise.all(
+    routes.map(route => {
+      return routeRepository.findOneById(route.id, {
+        relations: ['owner', 'likers', 'dislikers'],
+      })
+    })
+  )
+  for (let i = 0; i < routes.length; ++i) {
+    routes[i].ownerId = responses[i].owner.id
+    routes[i].likersId = responses[i].likers.map(liker => liker.id)
+    routes[i].dislikersId = responses[i].dislikers.map(dislikes => dislikes.id)
+  }
+
   return routes
 }
 
@@ -92,7 +104,7 @@ const getPath = async (start, goal) => {
     const current: Node = nodeMap[openSet.poll()]
 
     if (computeDistance(current, goal) === 0) {
-      return constructPath(cameFrom, current)
+      return await constructPath(cameFrom, current)
     }
 
     closedSet[current.id] = true
