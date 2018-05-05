@@ -23,16 +23,10 @@ class Route {
   @ManyToOne(type => User, user => user.routes)
   owner: User
 
-  @ManyToMany(type => User, user => user.likes)
-  likers: User[]
+  @ManyToMany(type => User, user => user.reports)
+  reporters: User[]
 
-  @ManyToMany(type => User, user => user.dislikes)
-  dislikers: User[]
-
-  @OneToMany(type => Node, node => node.route, {
-    cascadeInsert: true,
-    cascadeUpdate: true,
-  })
+  @OneToMany(type => Node, node => node.route)
   @JoinTable()
   nodes: Node[]
 }

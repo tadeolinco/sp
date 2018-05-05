@@ -34,22 +34,21 @@ const constructPath = async (cameFrom, current) => {
   const responses: any = await Promise.all(
     routes.map(route => {
       return routeRepository.findOneById(route.id, {
-        relations: ['owner', 'likers', 'dislikers'],
+        relations: ['owner', 'reporters'],
       })
     })
   )
+
   for (let i = 0; i < routes.length; ++i) {
     routes[i].ownerId = responses[i].owner.id
-    routes[i].likersId = responses[i].likers.map(liker => liker.id)
-    routes[i].dislikersId = responses[i].dislikers.map(dislikes => dislikes.id)
+    routes[i].reporterIds = responses[i].reporters.map(reporter => reporter.id)
   }
-
   return routes
 }
 
 const getPath = async (start, goal) => {
   const graph = await getRepository(Node).find({
-    relations: ['paths', 'route'],
+    relations: ['paths', 'route', 'route.reporters'],
   })
 
   if (!graph.length) return []
@@ -114,7 +113,8 @@ const getPath = async (start, goal) => {
 
       let tempG = gScore[current.id] + computeDistance(neighbor, current)
       if (nodeMap[neighbor.id].route.id !== current.route.id) {
-        tempG += gScore[current.id]
+        tempG +=
+          gScore[current.id] + nodeMap[neighbor.id].route.reporters.length
       }
       if (tempG >= gScore[neighbor.id]) continue
 

@@ -4,7 +4,6 @@ body {
   overflow: hidden;
   font-family: 'Roboto', sans-serif;
   max-height: 100%;
-  overflow: 'hidden';
 }
 
 body #root {

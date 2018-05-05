@@ -24,6 +24,7 @@ import originLogo from './assets/origin.svg'
 import mapStyles from './style.json'
 import VehicleMarker from './VehicleMarker'
 import { withMapSize } from '../../providers/MapSizeProvider'
+import RouteMarker from './RouteMarker'
 
 const assortedColors = [
   '#db2828',
@@ -579,6 +580,31 @@ class MapPanel extends Component {
     this.handleManually('setCenter', { lat: lastNode.lat, lng: lastNode.lng })
   }
 
+  handleToggleReport = async () => {
+    try {
+      const {
+        data: { route },
+      } = await Axios.post(`/api/routes/${this.state.selectedRoute.id}/reports`)
+      this.setState({
+        path: this.state.path.map(path => {
+          if (path.id === route.id) {
+            path.reporterIds = route.reporters.map(reporter => reporter.id)
+          }
+          return path
+        }),
+        selectedRoute: {
+          ...this.state.selectedRoute,
+          reporterIds: route.reporters.map(reporter => reporter.id),
+        },
+      })
+    } catch (err) {
+      console.log(err)
+      // this.props.notifications.clear(() => {
+      //   this.props.notifications.enqueue(err.response.message, 'error')
+      // })
+    }
+  }
+
   render() {
     const options = {
       styles: mapStyles,
@@ -599,7 +625,10 @@ class MapPanel extends Component {
         <VehicleMarker
           path={path}
           handleClick={() => {
-            this.setState({ selectedRoute: { ...path } })
+            this.setState({
+              selectedRoute: { ...path },
+              visibleSetPanel: false,
+            })
           }}
         />
       </Fragment>
@@ -842,45 +871,15 @@ class MapPanel extends Component {
             </Fragment>
           ))} */}
           {this.state.selectedRoute && (
-            <InfoWindow
-              position={{
-                lat: this.state.selectedRoute.nodes[0].lat,
-                lng: this.state.selectedRoute.nodes[0].lng,
-              }}
+            <RouteMarker
+              mapPanel={this}
+              selectedRoute={this.state.selectedRoute}
+              path={this.state.path}
+              handleToggleReport={this.handleToggleReport}
               onCloseClick={() => {
                 this.setState({ selectedRoute: null })
               }}
-            >
-              <div style={{ color: '#1b1c1d' }}>
-                <div style={{ fontWeight: 'bold' }}>Mode of Transportation</div>
-                <div>{this.state.selectedRoute.mode}</div>
-                <div style={{ fontWeight: 'bold' }}>Description</div>
-                <div>{this.state.selectedRoute.description || 'None'}</div>
-                <br />
-                <div>
-                  <span>0</span>{' '}
-                  <Icon
-                    style={{ cursor: 'pointer' }}
-                    name="thumbs outline up"
-                    size="large"
-                  />
-                  <span>0</span>{' '}
-                  <Icon
-                    style={{ cursor: 'pointer' }}
-                    name="thumbs outline down"
-                    size="large"
-                  />
-                </div>
-                <br />
-                {this.state.selectedRoute.ownerId ===
-                  this.props.session.user.id && (
-                  <Fragment>
-                    <Button color="blue">Update</Button>
-                    <Button color="red">Remove</Button>
-                  </Fragment>
-                )}
-              </div>
-            </InfoWindow>
+            />
           )}
         </GoogleMap>
       </Fragment>

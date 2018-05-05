@@ -18,10 +18,10 @@ class Node {
   @Column({ type: 'double' })
   lng: number
 
-  @ManyToOne(type => Route, route => route.nodes, { cascadeAll: true })
+  @ManyToOne(type => Route, route => route.nodes, { onDelete: 'CASCADE' })
   route: Route
 
-  @ManyToMany(type => Node, { cascadeInsert: true, cascadeUpdate: true })
+  @ManyToMany(type => Node)
   @JoinTable()
   paths: Node[]
 }
