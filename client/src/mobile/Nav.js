@@ -6,6 +6,7 @@ import SignupModal from '../components/SignupModal'
 import { MAP_MODE } from '../constants'
 import { withNotifications } from '../providers/NotificationsProvider'
 import { withSession } from '../providers/SessionProvider'
+import SurveyModal from './SurveyModal'
 
 class Nav extends Component {
   logout = async () => {
@@ -30,6 +31,12 @@ class Nav extends Component {
 
     const withSessionMenu = (
       <Dropdown.Menu>
+        {session.user &&
+          !session.user.survey && (
+            <SurveyModal
+              trigger={<Dropdown.Item>Help Graduate</Dropdown.Item>}
+            />
+          )}
         <Dropdown.Item
           onClick={() => {
             this.props.changeMapMode(MAP_MODE.ADD_ROUTE)

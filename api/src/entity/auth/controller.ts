@@ -13,7 +13,8 @@ const controller = {
         const { username, password } = req.body
         const userRepository = getRepository(User)
 
-        const user = await userRepository.findOne({ username })
+        let user = await userRepository.findOne({ username })
+
         if (!user) {
           return res
             .status(404)
@@ -23,8 +24,13 @@ const controller = {
         if (!(await bcrypt.compare(password, user.password))) {
           return res.status(400).json({ message: 'Wrong credentials.' })
         }
+
+        user = await userRepository.findOneById(user.id, {
+          relations: ['survey'],
+        })
         delete user.password
         req.session.user = user
+        console.log(user)
         res.status(200).json({ user })
       } catch (err) {
         console.log(err)

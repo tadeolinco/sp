@@ -2,6 +2,7 @@ import * as bcrypt from 'bcrypt'
 import { getRepository } from 'typeorm'
 import { isLoggedIn } from '../auth/middlware'
 import User from './entity'
+import Survey from '../survey/entity'
 
 const controller = {
   getAll: {
@@ -34,6 +35,7 @@ const controller = {
         }
 
         const user = await userRepository.save(req.body)
+        user.survey = null
         req.session.user = user
         res.status(200).json({ user })
       } catch (err) {
@@ -59,6 +61,39 @@ const controller = {
         await userRepository.update(req.params.id, req.body)
         const user = await userRepository.findOneById(req.params.id)
         res.status(200).json({ data: user })
+      } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: 'Internal server error.' })
+      }
+    },
+  },
+
+  answerSurvey: {
+    method: 'post',
+    path: '/survey',
+    middlewares: [isLoggedIn],
+    handler: async (req, res) => {
+      try {
+        if (req.session.user.survey) {
+          return res
+            .status(400)
+            .json({ message: 'User has already answered the survey' })
+        }
+        const surveryRepository = getRepository(Survey)
+        const userRepository = getRepository(User)
+        const { answers } = req.body
+        const body = answers.reduce((body, answer, index) => {
+          body[`question${index + 1}`] = +answer
+          return body
+        }, {})
+        const survey = await surveryRepository.save(body)
+        const user = await userRepository.findOneById(req.session.user.id)
+
+        user.survey = survey
+        await userRepository.save(user)
+        req.session.user = user
+
+        res.status(200).json({ user })
       } catch (err) {
         console.log(err)
         res.status(500).json({ message: 'Internal server error.' })
