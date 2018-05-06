@@ -443,6 +443,9 @@ const controller = {
         await getConnection().query(
           `DELETE FROM node_paths_node WHERE ${where}`
         )
+        await getConnection().query(
+          `DELETE FROM user_reports_route WHERE routeId = ${route.id}`
+        )
         await nodeRepository.removeByIds(route.nodes.map(node => node.id))
         await routeRepository.remove(route)
         res.status(200).json({})
