@@ -7,6 +7,7 @@ import { MAP_MODE } from '../constants'
 import { withNotifications } from '../providers/NotificationsProvider'
 import { withSession } from '../providers/SessionProvider'
 import SurveyModal from './SurveyModal'
+import HelpModal from './HelpModal'
 
 class Nav extends Component {
   logout = async () => {
@@ -44,12 +45,14 @@ class Nav extends Component {
         >
           Add Route
         </Dropdown.Item>
+        <HelpModal trigger={<Dropdown.Item>Help</Dropdown.Item>} />
         <Dropdown.Item onClick={this.logout}>Logout</Dropdown.Item>
       </Dropdown.Menu>
     )
 
     const withoutSessionMenu = (
       <Dropdown.Menu>
+        <HelpModal trigger={<Dropdown.Item>Help</Dropdown.Item>} />
         <LoginModal trigger={<Dropdown.Item>Login</Dropdown.Item>} />
         <SignupModal trigger={<Dropdown.Item>Sign Up</Dropdown.Item>} />
       </Dropdown.Menu>
