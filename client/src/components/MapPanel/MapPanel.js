@@ -5,12 +5,11 @@ import {
   GoogleMap,
   Marker,
   Polyline,
-  InfoWindow,
   withGoogleMap,
   withScriptjs,
 } from 'react-google-maps'
 import { compose, withProps } from 'recompose'
-import { Button, Icon, Divider } from 'semantic-ui-react'
+import { Button, Icon } from 'semantic-ui-react'
 import { ADD_ROUTE, DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
@@ -798,6 +797,25 @@ class MapPanel extends Component {
 
     return (
       <Fragment>
+        <Icon
+          onClick={() => {
+            this.setState(
+              {
+                origin: { ...this.state.destination },
+                destination: { ...this.state.origin },
+              },
+              this.handleSetPath
+            )
+          }}
+          name="exchange"
+          size="large"
+          style={{
+            position: 'absolute',
+            right: 10,
+            top: 14,
+            cursor: 'pointer',
+          }}
+        />
         <div
           style={{
             position: 'absolute',

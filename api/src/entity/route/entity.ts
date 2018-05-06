@@ -14,8 +14,6 @@ import User from '../user/entity'
 class Route {
   @PrimaryGeneratedColumn() id: number
 
-  @Column() fare: number
-
   @Column() mode: string
 
   @Column() description: string

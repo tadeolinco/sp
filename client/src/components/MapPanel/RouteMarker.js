@@ -28,8 +28,10 @@ const RouteMarker = ({
         <div>{selectedRoute.mode}</div>
         <div style={{ fontWeight: 'bold', paddingTop: 4 }}>Description</div>
         <div>{selectedRoute.description || 'None'}</div>
+        <div style={{ fontWeight: 'bold', paddingTop: 4 }}>Route by:</div>
+        <div>{selectedRoute.owner.username}</div>
         <div style={{ paddingTop: 4, width: '100%' }}>
-          {!session.user || session.user.id !== selectedRoute.ownerId ? (
+          {!session.user || session.user.id !== selectedRoute.owner.id ? (
             <div style={{ float: 'right' }}>
               <span>{selectedRoute.reporterIds.length}</span>{' '}
               <Icon

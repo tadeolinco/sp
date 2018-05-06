@@ -1,6 +1,6 @@
 import Axios from 'axios'
 import React, { Component } from 'react'
-import { Button, Form, Message, Modal } from 'semantic-ui-react'
+import { Button, Modal } from 'semantic-ui-react'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
 
@@ -13,11 +13,19 @@ class DeleteRouteModal extends Component {
     const { mapPanel, notifications } = this.props
     try {
       this.setState({ loading: true })
-      const {
-        data: { route },
-      } = await Axios.delete(`/api/routes/${mapPanel.state.selectedRoute.id}`)
+      await Axios.delete(`/api/routes/${mapPanel.state.selectedRoute.id}`)
 
-      this.modalRef.handleClose()
+      notifications.enqueue('Successfully delete route.', 'success')
+      mapPanel.setState({
+        path: [],
+        routes: mapPanel.state.routes.filter(
+          route => mapPanel.state.selectedRoute.id !== route.id
+        ),
+        selectedRoute: null,
+        visiblePath: false,
+        origin: { ...mapPanel.initialState.origin },
+        destination: { ...mapPanel.initialState.destination },
+      })
     } catch (err) {
       notifications.clear(() => {
         notifications.enqueue(err.response.data.message, 'error')
@@ -27,12 +35,12 @@ class DeleteRouteModal extends Component {
     }
   }
 
-  handleOnClose = () => {
+  handleOnOpen = () => {
     this.setState({ loading: false })
   }
 
   render() {
-    const { trigger, form } = this.props
+    const { trigger } = this.props
     const style = {
       marginTop: 0,
       width: '100%',
@@ -49,13 +57,14 @@ class DeleteRouteModal extends Component {
         closeIcon={this.props.platform.isMobile}
         style={style}
         trigger={trigger}
-        onClose={this.handleOnClose}
+        onOpen={this.handleOnOpen}
         ref={modalRef => (this.modalRef = modalRef)}
+        closeOnDocumentClick={!this.state.loading}
       >
         <Modal.Header>Delete Route</Modal.Header>
 
         <Modal.Content>
-          <h1>hi</h1>
+          <p>Are you sure you want to delete this route?</p>
         </Modal.Content>
         <Modal.Actions>
           <Button
@@ -65,7 +74,9 @@ class DeleteRouteModal extends Component {
           >
             Cancel
           </Button>
-          <Button onClick={this.handleDelete}>Delete</Button>
+          <Button onClick={this.handleDelete} loading={this.state.loading}>
+            Delete
+          </Button>
         </Modal.Actions>
       </Modal>
     )

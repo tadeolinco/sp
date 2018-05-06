@@ -40,7 +40,10 @@ const constructPath = async (cameFrom, current) => {
   )
 
   for (let i = 0; i < routes.length; ++i) {
-    routes[i].ownerId = responses[i].owner.id
+    routes[i].owner = {
+      id: responses[i].owner.id,
+      username: responses[i].owner.username,
+    }
     routes[i].reporterIds = responses[i].reporters.map(reporter => reporter.id)
   }
   return routes
@@ -113,8 +116,9 @@ const getPath = async (start, goal) => {
 
       let tempG = gScore[current.id] + computeDistance(neighbor, current)
       if (nodeMap[neighbor.id].route.id !== current.route.id) {
-        tempG +=
-          gScore[current.id] + nodeMap[neighbor.id].route.reporters.length
+        // tempG +=
+        //   gScore[current.id] + nodeMap[neighbor.id].route.reporters.length
+        tempG += 1 + nodeMap[neighbor.id].route.reporters.length
       }
       if (tempG >= gScore[neighbor.id]) continue
 
@@ -126,7 +130,6 @@ const getPath = async (start, goal) => {
       openSet.add(neighbor.id)
     }
   }
-
   return []
 }
 
