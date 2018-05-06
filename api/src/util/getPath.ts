@@ -116,9 +116,9 @@ const getPath = async (start, goal) => {
 
       let tempG = gScore[current.id] + computeDistance(neighbor, current)
       if (nodeMap[neighbor.id].route.id !== current.route.id) {
-        // tempG +=
-        //   gScore[current.id] + nodeMap[neighbor.id].route.reporters.length
-        tempG += 1 + nodeMap[neighbor.id].route.reporters.length
+        tempG +=
+          gScore[current.id] + nodeMap[neighbor.id].route.reporters.length
+        // tempG += 1 + nodeMap[neighbor.id].route.reporters.length
       }
       if (tempG >= gScore[neighbor.id]) continue
 
