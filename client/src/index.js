@@ -8,7 +8,7 @@ import { PlatformProvider } from './providers/PlatformProvider'
 import { SessionProvider } from './providers/SessionProvider'
 import { MapSizeProvider } from './providers/MapSizeProvider'
 
-// import registerServiceWorker from './registerServiceWorker'
+import registerServiceWorker from './registerServiceWorker'
 
 ReactDOM.render(
   <PlatformProvider>
@@ -23,4 +23,4 @@ ReactDOM.render(
   document.getElementById('root')
 )
 
-// registerServiceWorker()
+registerServiceWorker()
