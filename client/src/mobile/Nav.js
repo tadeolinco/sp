@@ -81,12 +81,7 @@ class Nav extends Component {
         >
           {session.user ? withSessionMenu : withoutSessionMenu}
         </Dropdown>
-        <Menu.Item
-          header
-          style={{ padding: '15px 10px', width: 'calc(100vw - 72px)' }}
-        >
-          <span style={{ margin: 'auto' }}>{title}</span>
-        </Menu.Item>
+        <Menu.Item header>{title}</Menu.Item>
       </Menu>
     )
   }

@@ -12,15 +12,19 @@ const modes = ['Jeepney', 'Bus', 'Train', 'Shuttle Service', 'UV Express'].map(
 )
 
 class RouteFormModal extends Component {
-  state = {
-    loading: false,
-  }
-
   handleSubmit = async e => {
     e.preventDefault()
     const { mapPanel, notifications, form, session } = this.props
     try {
-      this.setState({ loading: true })
+      notifications.clear(() => {
+        notifications.enqueue(
+          'Creating route... This might take a while.',
+          'info'
+        )
+      })
+
+      mapPanel.setState({ isCreatingRoute: true })
+
       const {
         data: { route },
       } = await Axios.post('/api/routes', {
@@ -41,12 +45,16 @@ class RouteFormModal extends Component {
       if (!session.user.hasCreatedRoute) {
         session.changeUser({ ...session.user, hasCreatedRoute: true })
       }
+
+      this.modalRef.handleClose()
+
       notifications.clear(() => {
         notifications.enqueue('Successfully added route!', 'success')
       })
       mapPanel.setState(
         {
           routes: [...mapPanel.state.routes, route],
+          isCreatingRoute: false,
         },
         () => {
           mapPanel.props.changeMapMode(MAP_MODE.VIEW)
@@ -60,13 +68,12 @@ class RouteFormModal extends Component {
       notifications.clear(() => {
         notifications.enqueue(err.response.data.message, 'error')
 
-        this.setState({ loading: false })
+        mapPanel.setState({ isCreatingRoute: false })
       })
     }
   }
 
   handleOnClose = () => {
-    this.setState({ ...this.initialState })
     this.props.form.resetForm()
   }
 
@@ -93,7 +100,7 @@ class RouteFormModal extends Component {
 
         <Modal.Content>
           {!!form.errors.length && <Message error list={form.errors} />}
-          <Form onSubmit={this.handleSubmit} loading={this.state.loading}>
+          <Form onSubmit={this.handleSubmit}>
             <Form.Select
               label="Mode of Transportation"
               options={modes}

@@ -9,7 +9,7 @@ import {
   withScriptjs,
 } from 'react-google-maps'
 import { compose, withProps } from 'recompose'
-import { Button, Icon } from 'semantic-ui-react'
+import { Button, Icon, Loader } from 'semantic-ui-react'
 import { ADD_ROUTE, DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
@@ -40,6 +40,7 @@ const assortedColors = [
 
 class MapPanel extends Component {
   initialState = {
+    isCreatingRoute: false,
     selectedRoute: null,
     settingOrigin: false,
     visibleSearchPanel: true,
@@ -816,6 +817,10 @@ class MapPanel extends Component {
             cursor: 'pointer',
           }}
         />
+        <div style={{ position: 'absolute', top: 24, right: 70 }}>
+          <Loader size="small" inverted active={this.state.isCreatingRoute} />
+        </div>
+
         <div
           style={{
             position: 'absolute',
