@@ -9,7 +9,7 @@ import {
   withScriptjs,
 } from 'react-google-maps'
 import { compose, withProps } from 'recompose'
-import { Button, Icon, Loader } from 'semantic-ui-react'
+import { Button, Icon, Loader, Dropdown } from 'semantic-ui-react'
 import { ADD_ROUTE, DEBOUNCE_ACTIONS, MAP_MODE } from '../../constants'
 import { withNotifications } from '../../providers/NotificationsProvider'
 import { withPlatform } from '../../providers/PlatformProvider'
@@ -40,6 +40,7 @@ const assortedColors = [
 
 class MapPanel extends Component {
   initialState = {
+    isGettingRoutes: false,
     isCreatingRoute: false,
     selectedRoute: null,
     settingOrigin: false,
@@ -86,6 +87,7 @@ class MapPanel extends Component {
 
   async componentDidMount() {
     this.props.mapSize.updatePaddingTop(76)
+    this.setState({ isGettingRoutes: true })
     try {
       const {
         data: { routes },
@@ -95,6 +97,8 @@ class MapPanel extends Component {
       this.props.notifications.clear(() => {
         this.props.notifications.enqueue(response.data.message, 'error')
       })
+    } finally {
+      this.setState({ isGettingRoutes: false })
     }
   }
 
@@ -650,15 +654,67 @@ class MapPanel extends Component {
 
     const setOriginButton = this.state.addingRoute ===
       ADD_ROUTE.SETTING_ORIGIN && (
-      <Button
-        loading={this.state.settingOrigin}
-        color="blue"
-        fluid
-        style={{ borderRadius: 0 }}
-        onClick={this.handleSetOrigin}
-      >
-        Set Origin
-      </Button>
+      <div>
+        <Dropdown
+          className="truncate"
+          placeholder="Origin"
+          fluid
+          selection
+          search={options => options}
+          value={this.state.origin.place_id}
+          options={this.state.origin.options}
+          style={{ borderRadius: 0, border: 0 }}
+          onSearchChange={(_, data) => {
+            this.handleSearch('origin', data.searchQuery)
+          }}
+          onChange={async (_, { value }) => {
+            this.setState({
+              origin: { ...this.state.origin, loadingOptions: true },
+            })
+            try {
+              const { data } = await Axios.get(`/api/place/${value}`)
+              this.setState(
+                {
+                  origin: {
+                    ...this.state.origin,
+                    place_id: data.place_id,
+                    lat: data.location.lat,
+                    lng: data.location.lng,
+                  },
+                },
+                () => {
+                  this.handleFitMarkers({ origin: this.state.origin })
+                }
+              )
+            } catch (err) {
+              console.log(err)
+              this.props.notifications.clear(() => {
+                this.props.notifications.enqueue(
+                  err.response.data.message,
+                  'error'
+                )
+              })
+            } finally {
+              this.setState({
+                origin: { ...this.state.origin, loadingOptions: false },
+              })
+            }
+          }}
+          noResultsMessage={
+            this.state.origin.loadingOptions ? 'Loading...' : 'No results'
+          }
+          loading={this.state.origin.loadingOptions}
+        />
+        <Button
+          loading={this.state.settingOrigin}
+          color="blue"
+          fluid
+          style={{ borderRadius: 0 }}
+          onClick={this.handleSetOrigin}
+        >
+          Set Origin
+        </Button>
+      </div>
     )
 
     const backButton = this.state.addingRoute === ADD_ROUTE.SETTING_ORIGIN && (
@@ -818,7 +874,11 @@ class MapPanel extends Component {
           }}
         />
         <div style={{ position: 'absolute', top: 24, right: 70 }}>
-          <Loader size="small" inverted active={this.state.isCreatingRoute} />
+          <Loader
+            size="small"
+            inverted
+            active={this.state.isCreatingRoute || this.state.isGettingRoutes}
+          />
         </div>
 
         <div

@@ -35,7 +35,11 @@ const SearchPanel = ({
         search={options => options}
         value={destination.place_id}
         options={destination.options}
-        style={{ borderRadius: 0, border: 0, borderLeft: '10px solid #db2828' }}
+        style={{
+          borderRadius: 0,
+          border: 0,
+          borderLeft: '10px solid #db2828',
+        }}
         onSearchChange={(event, data) =>
           handleSearch('destination', data.searchQuery)
         }

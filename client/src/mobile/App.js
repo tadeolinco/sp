@@ -10,7 +10,8 @@ class App extends Component {
     mapMode: MAP_MODE.VIEW,
   }
 
-  changeMapMode = mapMode => this.setState({ mapMode })
+  changeMapMode = (mapMode, callback = () => {}) =>
+    this.setState({ mapMode }, callback)
 
   render() {
     return (

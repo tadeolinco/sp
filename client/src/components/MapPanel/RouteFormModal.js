@@ -23,8 +23,10 @@ class RouteFormModal extends Component {
         )
       })
 
-      mapPanel.setState({ isCreatingRoute: true })
-
+      this.modalRef.handleClose()
+      mapPanel.props.changeMapMode(MAP_MODE.VIEW, () => {
+        mapPanel.setState({ isCreatingRoute: true })
+      })
       const {
         data: { route },
       } = await Axios.post('/api/routes', {
@@ -46,24 +48,13 @@ class RouteFormModal extends Component {
         session.changeUser({ ...session.user, hasCreatedRoute: true })
       }
 
-      this.modalRef.handleClose()
-
       notifications.clear(() => {
         notifications.enqueue('Successfully added route!', 'success')
       })
-      mapPanel.setState(
-        {
-          routes: [...mapPanel.state.routes, route],
-          isCreatingRoute: false,
-        },
-        () => {
-          mapPanel.props.changeMapMode(MAP_MODE.VIEW)
-          mapPanel.handleFitMarkers({
-            origin: upperBound,
-            destination: lowerBound,
-          })
-        }
-      )
+      mapPanel.setState({
+        routes: [...mapPanel.state.routes, route],
+        isCreatingRoute: false,
+      })
     } catch (err) {
       notifications.clear(() => {
         notifications.enqueue(err.response.data.message, 'error')
