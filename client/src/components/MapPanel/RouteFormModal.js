@@ -23,10 +23,10 @@ class RouteFormModal extends Component {
         )
       })
 
-      this.modalRef.handleClose()
       mapPanel.props.changeMapMode(MAP_MODE.VIEW, () => {
         mapPanel.setState({ isCreatingRoute: true })
       })
+
       const {
         data: { route },
       } = await Axios.post('/api/routes', {
@@ -34,6 +34,8 @@ class RouteFormModal extends Component {
         mode: form.values.modeOfTransportation,
         description: form.values.description,
       })
+
+      this.modalRef.handleClose()
 
       const upperBound = { lat: -Infinity, lng: -Infinity }
       const lowerBound = { lat: Infinity, lng: Infinity }
