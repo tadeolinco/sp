@@ -27,6 +27,8 @@ class RouteFormModal extends Component {
         mapPanel.setState({ isCreatingRoute: true })
       })
 
+      this.modalRef.handleClose()
+
       const {
         data: { route },
       } = await Axios.post('/api/routes', {
@@ -34,8 +36,6 @@ class RouteFormModal extends Component {
         mode: form.values.modeOfTransportation,
         description: form.values.description,
       })
-
-      this.modalRef.handleClose()
 
       const upperBound = { lat: -Infinity, lng: -Infinity }
       const lowerBound = { lat: Infinity, lng: Infinity }
@@ -66,7 +66,7 @@ class RouteFormModal extends Component {
     }
   }
 
-  handleOnClose = () => {
+  handleOnOpen = () => {
     this.props.form.resetForm()
   }
 
@@ -86,7 +86,7 @@ class RouteFormModal extends Component {
         closeIcon={this.props.platform.isMobile}
         style={style}
         trigger={trigger}
-        onClose={this.handleOnClose}
+        onOpen={this.handleOnOpen}
         ref={modalRef => (this.modalRef = modalRef)}
       >
         <Modal.Header>Add Route</Modal.Header>
